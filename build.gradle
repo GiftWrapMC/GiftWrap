@@ -1,0 +1,539 @@
+plugins {
+	id "org.quiltmc.loom" version "1.3.+"
+	id "eclipse"
+	id "maven-publish"
+	id "com.github.breadmoirai.github-release" version "2.4.1"
+	id "org.ajoberstar.grgit.service" version "5.2.0"
+	id "io.github.juuxel.loom-vineflower" version "1.11.0"
+	id "io.github.CDAGaming.cursegradle" version "1.6.1"
+	id "com.modrinth.minotaur" version "2.+"
+}
+
+repositories {
+	mavenLocal()
+	maven {
+		name = "Quilt"
+		url = "https://maven.quiltmc.org/repository/release/"
+	}
+	maven {
+		name = "Fabric"
+		url = "https://maven.fabricmc.net/"
+	}
+	maven {
+		name = "TerraformersMC"
+		url = "https://maven.terraformersmc.com/"
+	}
+	maven {
+		name = "CurseForge"
+		url = "https://minecraft.curseforge.com/api/maven"
+	}
+	maven {
+		name = "JitPack"
+		url = "https://jitpack.io"
+		content {
+			includeGroup "com.github.Virtuoel"
+		}
+	}
+	maven {
+		name = "GitHub"
+		url = "https://maven.pkg.github.com"
+	}
+}
+
+def ENV = System.getenv()
+
+TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
+
+group = project.maven_group
+base.archivesName = project.archives_base_name
+version = project.mod_version + "+" + (ENV.BUILD_NUMBER ? "build.${ENV.BUILD_NUMBER}-" : "") + (project.hasProperty("metadata_minecraft_versions") ? project.metadata_minecraft_versions : project.minecraft_version)
+
+if(project.hasProperty("forge_version")) {
+	version += "-forge"
+	
+	loom {
+		forge {
+			mixinConfig "${archives_base_name.replaceAll( /([A-Z])/, /_$1/ ).toLowerCase().replaceAll( /^_/, '' )}.mixins.json"
+		}
+	}
+}
+else {
+	loom {
+		def access_widener_file = file("src/main/resources/${archives_base_name.replaceAll( /([A-Z])/, /_$1/ ).toLowerCase().replaceAll( /^_/, '' )}.accesswidener");
+		if (access_widener_file.exists()) {
+			accessWidenerPath = access_widener_file
+		}
+	}
+}
+
+loom {
+	mixin {
+		defaultRefmapName = "${archives_base_name}-refmap.json"
+	}
+}
+
+vineflower {
+	addToRuntimeClasspath = !project.hasProperty("forge_version")
+	preferences {
+		ind = "\t"
+	}
+}
+
+if(project.hasProperty("loader_version")) {
+	if(!project.hasProperty("quilt_version")) {
+		ext.fabric_loader_version = project.loader_version
+	}
+	else {
+		ext.quilt_loader_version = project.loader_version
+	}
+}
+
+if(project.hasProperty("fabric_version")) {
+	ext.fabric_api_version = project.fabric_version
+}
+
+if(project.hasProperty("quilt_version")) {
+	ext.quilted_fabric_api_version = project.quilt_version
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${minecraft_version}"
+	if(!project.yarn_mappings.contains(", ")) {
+		mappings "net.fabricmc:yarn:${yarn_mappings}:v2"
+	}
+	else {
+		mappings loom.layered {
+			project.yarn_mappings.split(", ").each { String mapping ->
+				mappings "net.fabricmc:yarn:${mapping}:v2"
+			}
+		}
+	}
+	
+	if(project.hasProperty("forge_version")) {
+		forge "net.minecraftforge:forge:${forge_version}"
+	}
+	else {
+		def excludeFabric = {
+			exclude group: "net.fabricmc", module: "fabric-loader"
+			exclude group: "net.fabricmc.fabric-api"
+		}
+		
+		if(project.hasProperty("fabric_loader_version")) {
+			modImplementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
+			
+			def excludeLoader = { exclude group: "net.fabricmc", module: "fabric-loader" }
+			def excludeApi = { exclude group: "net.fabricmc.fabric-api" }
+			
+			if(project.hasProperty("fabric_api_version")) {
+				if(!project.hasProperty("fabric_modules") && !project.hasProperty("api_fabric_modules") && !project.hasProperty("impl_fabric_modules")) {
+					modCompileOnly "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}", excludeLoader
+					modLocalRuntime "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}", excludeLoader
+				}
+				
+				if(project.hasProperty("fabric_modules")) {
+					project.fabric_modules.split(", ").each { String module ->
+						modCompileOnly fabricApi.module(module, project.fabric_api_version), excludeLoader
+						modLocalRuntime fabricApi.module(module, project.fabric_api_version), excludeLoader
+					}
+				}
+				
+				if(project.hasProperty("api_fabric_modules")) {
+					project.api_fabric_modules.split(", ").each { String module ->
+						modApi fabricApi.module(module, project.fabric_api_version), excludeLoader
+					}
+				}
+				
+				if(project.hasProperty("impl_fabric_modules")) {
+					project.impl_fabric_modules.split(", ").each { String module ->
+						modImplementation fabricApi.module(module, project.fabric_api_version), excludeLoader
+					}
+				}
+				
+				if(project.hasProperty("included_fabric_modules")) {
+					project.included_fabric_modules.split(", ").each { String module ->
+						include fabricApi.module(module, project.fabric_api_version)
+					}
+				}
+			}
+		}
+		else if(project.hasProperty("quilt_loader_version")) {
+			modImplementation "org.quiltmc:quilt-loader:${quilt_loader_version}"
+			
+			modImplementation "org.quiltmc.quilted-fabric-api:quilted-fabric-api:${quilted_fabric_api_version}"
+			modImplementation "org.quiltmc.quilted-fabric-api:quilted-fabric-api-deprecated:${quilted_fabric_api_version}"
+		}
+		
+		if(project.hasProperty("modmenu_version")) {
+			modCompileOnly "com.terraformersmc:modmenu:${modmenu_version}", excludeFabric
+			modLocalRuntime "com.terraformersmc:modmenu:${modmenu_version}", excludeFabric
+		}
+	}
+}
+
+processResources {
+	inputs.property "version", project.version
+	
+	filesMatching("fabric.mod.json") {
+		expand "version": project.version
+	}
+	
+	filesMatching("META-INF/mods.toml") {
+		expand "file": [ jarVersion: project.version ]
+	}
+}
+
+def proj = project
+eclipse {
+	project {
+		name = archives_base_name
+		buildCommand "org.eclipse.buildship.core.gradleprojectbuilder"
+		natures "org.eclipse.buildship.core.gradleprojectnature"
+	}
+	if(!proj.hasProperty("forge_version")) {
+		jdt {
+			javaRuntimeName = "JavaSE-17"
+		}
+	}
+	else {
+		def minor = (minecraft_version.split(/\./, -1)[1] as Integer);
+		jdt {
+			javaRuntimeName = "JavaSE-${minor >= 18 ? 17 : minor >= 17 ? 16 : 1.8}"
+		}
+	}
+}
+
+tasks.withType(JavaCompile) {
+	options.encoding = "UTF-8"
+	options.compilerArgs += [ "-Xmaxwarns", "0" ]
+}
+
+tasks.withType(AbstractArchiveTask) {
+	preserveFileTimestamps = false
+	reproducibleFileOrder = true
+}
+
+java {
+	withSourcesJar()
+	
+	sourceCompatibility = JavaVersion.VERSION_1_8
+	targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+jar {
+	from "LICENSE"
+	manifest
+	{
+		attributes "Implementation-Title": base.archivesName.get()
+		attributes "Implementation-Version": project.version
+		attributes "Maven-Artifact": "${project.group}:${base.archivesName.get()}:${project.version}"
+		attributes "Built-On-Minecraft": "${project.minecraft_version}"
+		attributes "Built-On-Java": "${System.getProperty("java.vm.version")} (${System.getProperty("java.vm.vendor")})"
+	}
+}
+
+tasks.named("sourcesJar") {
+	exclude "fabric.mod.json"
+	exclude "META-INF/mods.toml"
+	manifest
+	{
+		attributes "Implementation-Title": base.archivesName.get() + "-sources"
+		attributes "Implementation-Version": project.version
+		attributes "Maven-Artifact": "${project.group}:${base.archivesName.get()}:${project.version}:sources"
+		attributes "Built-On-Minecraft": "${project.minecraft_version}"
+		attributes "Built-On-Java": "${System.getProperty("java.vm.version")} (${System.getProperty("java.vm.vendor")})"
+	}
+}
+
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			from components.java
+		}
+	}
+	
+	repositories {
+		mavenLocal()
+		if(project.hasProperty("maven_repo") && project.hasProperty("maven_username") && project.hasProperty("maven_password")) {
+			maven {
+				url = project.maven_repo
+				
+				credentials {
+					username project.maven_username
+					password project.maven_password
+				}
+			}
+		}
+	}
+}
+
+if(project.hasProperty("fabric_api_version")) {
+	ext.changelog_fabric_api_version = project.fabric_api_version
+}
+
+if(project.hasProperty("quilted_fabric_api_version")) {
+	ext.changelog_quilted_fabric_api_version = project.quilted_fabric_api_version
+}
+
+String generateHTMLChangelog() {
+	String changelog_text = ""
+	
+	File file = file("changelog.txt")
+	if(file.exists())
+	{
+		file.eachLine { String line ->
+			if(!line.isAllWhitespace())
+			{
+				changelog_text += "<p>${line.stripIndent()}</p>\n"
+			}
+		}
+		changelog_text += "<p>&nbsp;</p>\n"
+	}
+	
+	changelog_text += "<p>Last successfully tested on:</p>\n"
+	changelog_text += "<p>Minecraft version <code>${minecraft_version}</code></p>\n"
+	
+	if(project.hasProperty("forge_version")) {
+		changelog_text += "<p>Forge <code>${forge_version}</code></p>\n"
+	}
+	
+	if(project.hasProperty("fabric_loader_version")) {
+		changelog_text += "<p>Fabric Loader <code>${fabric_loader_version}</code></p>\n"
+	}
+	
+	changelog_text += "<p>Yarn mappings <code>${yarn_mappings}</code></p>\n"
+	
+	if(project.hasProperty("changelog_fabric_api_version")) {
+		changelog_text += "<p><a href=\"https://www.curseforge.com/minecraft/mc-mods/fabric-api/files/all\" rel=\"nofollow\">Fabric API <code>${changelog_fabric_api_version}</code></a></p>\n"
+	}
+	
+	if(project.hasProperty("changelog_quilted_fabric_api_version")) {
+		changelog_text += "<p><a href=\"https://www.curseforge.com/minecraft/mc-mods/qsl/files/all\" rel=\"nofollow\">Quilted Fabric API <code>${changelog_quilted_fabric_api_version}</code></a></p>\n"
+	}
+	
+	return changelog_text
+}
+
+String generateMarkdownChangelog() {
+	String changelog_text = ""
+	
+	File file = file("changelog.txt")
+	if(file.exists())
+	{
+		file.eachLine { String line ->
+			if(!line.isAllWhitespace())
+			{
+				changelog_text += "${line.stripIndent()}  \n"
+			}
+		}
+		changelog_text += "&nbsp;  \n"
+	}
+	
+	changelog_text += "Last successfully tested on:  \n"
+	changelog_text += "Minecraft version " + '`' + "${minecraft_version}" + '`' + "  \n"
+	
+	if(project.hasProperty("forge_version")) {
+		changelog_text += "Forge " + '`' + "${forge_version}" + '`' + "  \n"
+	}
+	
+	if(project.hasProperty("fabric_loader_version")) {
+		changelog_text += "Fabric Loader " + '`' + "${fabric_loader_version}" + '`' + "  \n"
+	}
+	
+	changelog_text += "Yarn mappings " + '`' + "${yarn_mappings}" + '`' + "  \n"
+	
+	if(project.hasProperty("changelog_fabric_api_version")) {
+		changelog_text += "[Fabric API " + '`' + "${changelog_fabric_api_version}" + '`' + "](https://modrinth.com/mod/fabric-api/versions)  \n"
+	}
+	
+	if(project.hasProperty("changelog_quilted_fabric_api_version")) {
+		changelog_text += "[Quilted Fabric API " + '`' + "${changelog_quilted_fabric_api_version}" + '`' + "](https://modrinth.com/mod/qsl/versions)  \n"
+	}
+	
+	return changelog_text
+}
+
+githubRelease {
+	token project.hasProperty("github_releases_token") ? project.github_releases_token : ""
+	
+	if(project.hasProperty("github_repository_owner")) {
+		owner project.github_repository_owner
+	}
+	
+	if(project.hasProperty("github_repository")) {
+		repo project.github_repository
+	}
+	
+	if(project.hasProperty("forge_version")) {
+		tagName "${project.mod_version}-${project.minecraft_version}-forge"
+	}
+	
+	if(project.hasProperty("fabric_loader_version") || project.hasProperty("quilt_loader_version")) {
+		tagName project.mod_version
+	}
+	
+	targetCommitish { grgitService.service.get().grgit.branch.current().name }
+	
+	body generateMarkdownChangelog()
+	
+	overwrite true
+	
+	releaseName project.version
+	
+	releaseAssets = files("${project.buildDir}/libs/${base.archivesName.get()}-${version}.jar", "${project.buildDir}/libs/${base.archivesName.get()}-${version}-sources.jar").files
+}
+
+tasks.named("githubRelease") {
+	dependsOn remapJar
+	dependsOn sourcesJar
+	dependsOn remapSourcesJar
+}
+
+curseforge {
+	if(project.hasProperty("curseforge_api_key")) {
+		apiKey = project.properties.curseforge_api_key
+	}
+	
+	if(project.hasProperty("curseforge_id")) {
+		project {
+			id = project.curseforge_id
+			
+			releaseType = project.curseforge_release_type
+			
+			if(project.hasProperty("curseforge_mod_loaders")) {
+				project.curseforge_mod_loaders.split(", ").each { String loader ->
+					addGameVersion loader
+				}
+			}
+			
+			def display_name_prefix = ""
+			if(project.hasProperty("curseforge_release_versions")) {
+				def game_versions = project.curseforge_release_versions.split(", ")
+				display_name_prefix = "[${game_versions[0]} - ${game_versions[-1].split("-")[0]}] "
+				if(game_versions[0] == game_versions[-1].split("-")[0]) {
+					display_name_prefix = "[${game_versions[0]}] "
+				}
+				game_versions.each { String gameVersion ->
+					addGameVersion gameVersion
+				}
+			}
+			
+			if(project.hasProperty("forge_version")) {
+				display_name_prefix += "[Forge] "
+			}
+			
+			mainArtifact(remapJar) {
+				it.displayName = "${display_name_prefix}${archives_base_name} ${project.mod_version}"
+				
+				if(project.hasProperty("curseforge_required_dep_slugs") || project.hasProperty("curseforge_embedded_lib_slugs") || project.hasProperty("curseforge_optional_dep_slugs") || project.hasProperty("curseforge_compatible_tool_slugs") || project.hasProperty("curseforge_incompatible_slugs")) {
+					relations {
+						if(project.hasProperty("curseforge_required_dep_slugs")) {
+							project.curseforge_required_dep_slugs.split(", ").each { String slug ->
+								it.requiredDependency slug
+							}
+						}
+						
+						if(project.hasProperty("curseforge_embedded_lib_slugs")) {
+							project.curseforge_embedded_lib_slugs.split(", ").each { String slug ->
+								it.embeddedLibrary slug
+							}
+						}
+						
+						if(project.hasProperty("curseforge_optional_dep_slugs")) {
+							project.curseforge_optional_dep_slugs.split(", ").each { String slug ->
+								it.optionalDependency slug
+							}
+						}
+						
+						if(project.hasProperty("curseforge_compatible_tool_slugs")) {
+							project.curseforge_compatible_tool_slugs.split(", ").each { String slug ->
+								it.tool slug
+							}
+						}
+						
+						if(project.hasProperty("curseforge_incompatible_slugs")) {
+							project.curseforge_incompatible_slugs.split(", ").each { String slug ->
+								it.incompatible slug
+							}
+						}
+					}
+				}
+				
+				changelogType = "html"
+				changelog = project.generateHTMLChangelog()
+			}
+			
+			addArtifact(sourcesJar) {
+				it.displayName = "${archives_base_name} ${project.mod_version} Source Code"
+			}
+		}
+		options {
+			forgeGradleIntegration = false
+		}
+	}
+}
+
+if(project.hasProperty("curseforge_id")) {
+	afterEvaluate {
+		tasks.named("curseforge${project.curseforge_id}") {
+			dependsOn remapJar
+			dependsOn remapSourcesJar
+		}
+	}
+}
+
+import com.modrinth.minotaur.dependencies.ModDependency
+
+modrinth {
+	if(project.hasProperty("modrinth_token")) {
+		token = project.properties.modrinth_token
+	}
+	
+	if(project.hasProperty("modrinth_id")) {
+		projectId = project.modrinth_id
+		
+		versionType = project.modrinth_version_type
+		
+		if(project.hasProperty("modrinth_mod_loaders")) {
+			loaders = project.modrinth_mod_loaders.split(", ") as List
+		}
+		
+		if(project.hasProperty("modrinth_release_versions")) {
+			gameVersions = project.modrinth_release_versions.split(", ") as List
+		}
+		
+		def deps = []
+		
+		if(project.hasProperty("modrinth_required_dep_ids")) {
+			project.modrinth_required_dep_ids.split(", ").each { String slug ->
+				deps << new ModDependency(slug, "required")
+			}
+		}
+		
+		if(project.hasProperty("modrinth_optional_dep_ids")) {
+			project.modrinth_optional_dep_ids.split(", ").each { String slug ->
+				deps << new ModDependency(slug, "optional")
+			}
+		}
+		
+		if(project.hasProperty("modrinth_incompatible_dep_ids")) {
+			project.modrinth_incompatible_dep_ids.split(", ").each { String slug ->
+				deps << new ModDependency(slug, "incompatible")
+			}
+		}
+		
+		dependencies = deps
+		
+		versionName = "${archives_base_name} ${project.mod_version}"
+		
+		versionNumber = project.version
+		
+		changelog = generateMarkdownChangelog()
+		
+		uploadFile = remapJar
+	}
+}
+
+tasks.named("modrinth") {
+	dependsOn remapJar
+	dependsOn remapSourcesJar
+}
