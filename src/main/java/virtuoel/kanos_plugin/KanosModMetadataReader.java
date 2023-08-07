@@ -1,9 +1,13 @@
 package virtuoel.kanos_plugin;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import org.jetbrains.annotations.Nullable;
 import org.quiltmc.loader.api.LoaderValue;
@@ -14,6 +18,9 @@ import org.quiltmc.loader.api.Version;
 import org.quiltmc.loader.api.plugin.ModMetadataExt;
 import org.quiltmc.loader.impl.metadata.qmj.AdapterLoadableClassEntry;
 
+import com.electronwill.nightconfig.core.CommentedConfig;
+import com.electronwill.nightconfig.core.file.CommentedFileConfig;
+
 import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.api.metadata.ModEnvironment;
 
@@ -21,11 +28,37 @@ public class KanosModMetadataReader
 {
 	public static ModMetadataExt parseMetadata(Path modsToml)
 	{
-		// TODO
+		final CommentedFileConfig file = CommentedFileConfig.of(modsToml);
+		file.load();
+		
+		final List<CommentedConfig> mods = file.get("mods");
+		
+		final CommentedConfig mod = mods.get(0);
+		
+		final String modId = mod.get("modId");
+		final String modName = mod.get("displayName");
+		final String description = mod.get("description");
+		final String icon = mod.get("logoFile");
+		
+		String version = mod.get("version");
+		
+		if ("${file.jarVersion}".equals(version))
+		{
+			try (final Stream<String> lines = Files.lines(modsToml.getParent().resolve("MANIFEST.MF")))
+			{
+				version = lines.filter(s -> s.startsWith("Implementation-Version"))
+					.findFirst().map(s -> s.split(" ")[1]).orElse(version);
+			}
+			catch (IOException e)
+			{
+				
+			}
+		}
+		
+		final Version modVersion = Version.of(version);
 		
 		return new ModMetadataExt()
 		{
-			
 			@Override
 			public Collection<String> mixins(EnvType env)
 			{
@@ -47,7 +80,7 @@ public class KanosModMetadataReader
 			@Override
 			public Version version()
 			{
-				return Version.of("1.0.0");
+				return modVersion;
 			}
 			
 			@Override
@@ -65,7 +98,7 @@ public class KanosModMetadataReader
 			@Override
 			public String name()
 			{
-				return "ModName";
+				return modName;
 			}
 			
 			@Override
@@ -77,13 +110,13 @@ public class KanosModMetadataReader
 			@Override
 			public String id()
 			{
-				return "mod_id_here";
+				return modId;
 			}
 			
 			@Override
 			public @Nullable String icon(int size)
 			{
-				return null;
+				return icon;
 			}
 			
 			@Override
@@ -101,7 +134,7 @@ public class KanosModMetadataReader
 			@Override
 			public String description()
 			{
-				return "Desc here";
+				return description;
 			}
 			
 			@Override

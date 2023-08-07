@@ -109,6 +109,10 @@ dependencies {
 		}
 	}
 	
+	implementation "net.fabricmc:mapping-io:0.4.2"
+	implementation "com.electronwill.night-config:core:3.6.6"
+	implementation "com.electronwill.night-config:toml:3.6.6"
+	
 	if(project.hasProperty("forge_version")) {
 		forge "net.minecraftforge:forge:${forge_version}"
 	}
