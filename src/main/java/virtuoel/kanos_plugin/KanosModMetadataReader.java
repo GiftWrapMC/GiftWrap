@@ -89,7 +89,7 @@ public class KanosModMetadataReader
 			@Override
 			public String group()
 			{
-				return "forge_group";
+				return "loader.forge";
 			}
 			
 			@Override
