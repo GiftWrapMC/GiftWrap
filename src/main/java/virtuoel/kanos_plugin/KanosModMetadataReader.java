@@ -28,6 +28,8 @@ import net.fabricmc.loader.api.metadata.ModEnvironment;
 
 public class KanosModMetadataReader
 {
+	private static final String VALUE_LOCATION = "not-from-file";
+	
 	public static ModMetadataExt parseMetadata(Path modsToml)
 	{
 		final CommentedFileConfig file = CommentedFileConfig.of(modsToml);
@@ -97,7 +99,10 @@ public class KanosModMetadataReader
 		final Version modVersion = Version.of(version);
 		
 		final Map<String, LoaderValue> customValues = new HashMap<>();
-		// TODO
+		customValues.put("patchwork:patcherMeta", new TomlLoaderValue.BooleanImpl(VALUE_LOCATION, true));
+		final Map<String, TomlLoaderValue> modmenu = new HashMap<>();
+		modmenu.put("update_checker", new TomlLoaderValue.BooleanImpl(VALUE_LOCATION, false));
+		customValues.put("modmenu", new TomlLoaderValue.ObjectImpl(VALUE_LOCATION, modmenu));
 		
 		final Map<String, Collection<AdapterLoadableClassEntry>> entrypoints = new HashMap<>();
 		// TODO
