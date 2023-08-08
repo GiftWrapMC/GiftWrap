@@ -33,7 +33,6 @@ public class KanosPlugin implements QuiltLoaderPlugin
 		{
 			return null;
 		}
-		LOGGER.info("Loaded a mod");
 		
 		Path from = context().manager().getParent(root);
 		
