@@ -3,8 +3,10 @@ package virtuoel.kanos_plugin;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -31,6 +33,36 @@ public class KanosModMetadataReader
 		final CommentedFileConfig file = CommentedFileConfig.of(modsToml);
 		file.load();
 		
+		final String license = file.get("license");
+		final Collection<ModLicense> licenses = Collections.singletonList(new ModLicense()
+		{
+			@Override
+			public String url()
+			{
+				return "";
+			}
+			
+			@Override
+			public String name()
+			{
+				return license;
+			}
+			
+			@Override
+			public String id()
+			{
+				return license;
+			}
+			
+			@Override
+			public String description()
+			{
+				return "";
+			}
+		});
+		
+		final String issueTrackerUrl = file.get("issueTrackerURL");
+		
 		final List<CommentedConfig> mods = file.get("mods");
 		
 		final CommentedConfig mod = mods.get(0);
@@ -39,6 +71,13 @@ public class KanosModMetadataReader
 		final String modName = mod.get("displayName");
 		final String description = mod.get("description");
 		final String icon = mod.get("logoFile");
+		
+		final Map<String, String> contactInfo = new HashMap<>();
+		contactInfo.put("homepage", mod.get("displayURL"));
+		contactInfo.put("issues", issueTrackerUrl);
+		
+		final String authors = mod.get("authors");
+		final Collection<ModContributor> contributors = authors == null ? Collections.emptyList() : Collections.singletonList(ModContributor.of(authors, Collections.singletonList("Author")));
 		
 		String version = mod.get("version");
 		
@@ -57,12 +96,24 @@ public class KanosModMetadataReader
 		
 		final Version modVersion = Version.of(version);
 		
+		final Map<String, LoaderValue> customValues = new HashMap<>();
+		// TODO
+		
+		final Map<String, Collection<AdapterLoadableClassEntry>> entrypoints = new HashMap<>();
+		// TODO
+		
+		final Collection<String> accessWideners = new ArrayList<>();
+		// TODO
+		
+		final Collection<String> mixins = new ArrayList<>();
+		// TODO
+		
 		return new ModMetadataExt()
 		{
 			@Override
 			public Collection<String> mixins(EnvType env)
 			{
-				return Collections.emptyList();
+				return mixins;
 			}
 			
 			@Override
@@ -74,7 +125,7 @@ public class KanosModMetadataReader
 			@Override
 			public Collection<String> accessWideners()
 			{
-				return Collections.emptyList();
+				return accessWideners;
 			}
 			
 			@Override
@@ -86,13 +137,13 @@ public class KanosModMetadataReader
 			@Override
 			public Map<String, LoaderValue> values()
 			{
-				return Collections.emptyMap();
+				return customValues;
 			}
 			
 			@Override
 			public @Nullable LoaderValue value(String key)
 			{
-				return null;
+				return values().get(key);
 			}
 			
 			@Override
@@ -104,7 +155,7 @@ public class KanosModMetadataReader
 			@Override
 			public Collection<ModLicense> licenses()
 			{
-				return Collections.emptyList();
+				return licenses;
 			}
 			
 			@Override
@@ -128,7 +179,7 @@ public class KanosModMetadataReader
 			@Override
 			public @Nullable String getContactInfo(String key)
 			{
-				return "Contact here";
+				return contactInfo().getOrDefault(key, null);
 			}
 			
 			@Override
@@ -146,19 +197,19 @@ public class KanosModMetadataReader
 			@Override
 			public Collection<ModContributor> contributors()
 			{
-				return Collections.emptyList();
+				return contributors;
 			}
 			
 			@Override
 			public boolean containsValue(String key)
 			{
-				return false;
+				return values().containsKey(key);
 			}
 			
 			@Override
 			public Map<String, String> contactInfo()
 			{
-				return Collections.emptyMap();
+				return contactInfo;
 			}
 			
 			@Override
@@ -182,7 +233,7 @@ public class KanosModMetadataReader
 			@Override
 			public Map<String, Collection<AdapterLoadableClassEntry>> getEntrypoints()
 			{
-				return Collections.emptyMap();
+				return entrypoints;
 			}
 		};
 	}
