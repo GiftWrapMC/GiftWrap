@@ -40,7 +40,10 @@ public class KanosPlugin implements QuiltLoaderPlugin
 		boolean mandatory = location.isDirect();
 		ModMetadataExt meta = KanosModMetadataReader.parseMetadata(modsToml);
 		boolean requiresRemap = !location.onClasspath();
-		return new ModLoadOption[] { new KanosModOption(context(), meta, from, fileIcon, root, mandatory, requiresRemap) };
+		
+		Path resourceRoot = root;
+		
+		return new ModLoadOption[] { new KanosModOption(context(), meta, from, fileIcon, resourceRoot, mandatory, requiresRemap) };
 	}
 	
 	public QuiltPluginContext context()

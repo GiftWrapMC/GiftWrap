@@ -88,7 +88,13 @@ public class KanosModMetadataReader
 			try (final Stream<String> lines = Files.lines(modsToml.getParent().resolve("MANIFEST.MF")))
 			{
 				version = lines.filter(s -> s.startsWith("Implementation-Version"))
-					.findFirst().map(s -> s.split(" ")[1]).orElse(version);
+					.findFirst()
+					.map(s ->
+					{
+						final int index = s.indexOf(' ');
+						return index == -1 ? null : s.substring(index + 1);
+					})
+					.orElse(version);
 			}
 			catch (IOException e)
 			{
