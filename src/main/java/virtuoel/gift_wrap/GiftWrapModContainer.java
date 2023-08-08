@@ -1,4 +1,4 @@
-package virtuoel.kanos_plugin;
+package virtuoel.gift_wrap;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -7,14 +7,14 @@ import org.quiltmc.loader.api.plugin.ModContainerExt;
 import org.quiltmc.loader.api.plugin.ModMetadataExt;
 import org.quiltmc.loader.api.plugin.QuiltPluginContext;
 
-public class KanosModContainer implements ModContainerExt
+public class GiftWrapModContainer implements ModContainerExt
 {
 	private final String pluginId;
 	private final ModMetadataExt metadata;
 	private final Path resourceRoot;
 	private final List<List<Path>> sourcePaths;
 	
-	public KanosModContainer(QuiltPluginContext pluginContext, ModMetadataExt metadata, Path from, Path resourceRoot)
+	public GiftWrapModContainer(QuiltPluginContext pluginContext, ModMetadataExt metadata, Path from, Path resourceRoot)
 	{
 		this.pluginId = pluginContext.pluginId();
 		this.metadata = metadata;

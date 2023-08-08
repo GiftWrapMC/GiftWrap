@@ -1,4 +1,4 @@
-package virtuoel.kanos_plugin;
+package virtuoel.gift_wrap;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,7 +16,7 @@ import org.quiltmc.loader.api.plugin.ModMetadataExt;
 import org.quiltmc.loader.api.plugin.QuiltPluginContext;
 import org.quiltmc.loader.api.plugin.solver.ModLoadOption;
 
-public class KanosModOption extends ModLoadOption
+public class GiftWrapModOption extends ModLoadOption
 {
 	protected final QuiltPluginContext pluginContext;
 	protected final ModMetadataExt metadata;
@@ -27,7 +27,7 @@ public class KanosModOption extends ModLoadOption
 	
 	byte[] hash;
 	
-	public KanosModOption(QuiltPluginContext pluginContext, ModMetadataExt meta, Path from, QuiltLoaderIcon fileIcon, Path resourceRoot, boolean mandatory, boolean requiresRemap)
+	public GiftWrapModOption(QuiltPluginContext pluginContext, ModMetadataExt meta, Path from, QuiltLoaderIcon fileIcon, Path resourceRoot, boolean mandatory, boolean requiresRemap)
 	{
 		this.pluginContext = pluginContext;
 		this.metadata = meta;
@@ -160,7 +160,7 @@ public class KanosModOption extends ModLoadOption
 	@Override
 	public ModContainerExt convertToMod(Path transformedResourceRoot)
 	{
-		return new KanosModContainer(
+		return new GiftWrapModContainer(
 			pluginContext, metadata, from, transformedResourceRoot
 		);
 	}

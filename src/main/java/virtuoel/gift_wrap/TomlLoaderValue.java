@@ -1,4 +1,4 @@
-package virtuoel.kanos_plugin;
+package virtuoel.gift_wrap;
 
 import java.util.AbstractMap;
 import java.util.Collection;

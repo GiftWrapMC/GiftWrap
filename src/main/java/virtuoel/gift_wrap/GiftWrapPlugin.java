@@ -1,4 +1,4 @@
-package virtuoel.kanos_plugin;
+package virtuoel.gift_wrap;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -18,9 +18,9 @@ import org.quiltmc.loader.api.plugin.solver.ModLoadOption;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class KanosPlugin implements QuiltLoaderPlugin
+public class GiftWrapPlugin implements QuiltLoaderPlugin
 {
-	public static final String MOD_ID = "kanos_plugin";
+	public static final String MOD_ID = "gift_wrap";
 	
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 	
@@ -41,12 +41,12 @@ public class KanosPlugin implements QuiltLoaderPlugin
 		
 		QuiltLoaderIcon fileIcon = QuiltLoaderGui.iconJarFile();
 		boolean mandatory = location.isDirect();
-		ModMetadataExt meta = KanosModMetadataReader.parseMetadata(modsToml);
+		ModMetadataExt meta = GiftWrapModMetadataReader.parseMetadata(modsToml);
 		boolean requiresRemap = !location.onClasspath();
 		
 		Path resourceRoot = root;
 		
-		return new ModLoadOption[] { new KanosModOption(context(), meta, fromPath, fileIcon, resourceRoot, mandatory, requiresRemap) };
+		return new ModLoadOption[] { new GiftWrapModOption(context(), meta, fromPath, fileIcon, resourceRoot, mandatory, requiresRemap) };
 	}
 	
 	public QuiltPluginContext context()

@@ -1,4 +1,4 @@
-package virtuoel.kanos_plugin;
+package virtuoel.gift_wrap;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -26,7 +26,7 @@ import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.api.metadata.ModEnvironment;
 
-public class KanosModMetadataReader
+public class GiftWrapModMetadataReader
 {
 	private static final String VALUE_LOCATION = "not-from-file";
 	

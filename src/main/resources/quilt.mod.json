@@ -3,11 +3,11 @@
 	"quilt_loader":
 	{
 		"group": "virtuoel",
-		"id": "kanos_plugin",
+		"id": "gift_wrap",
 		"version": "${version}",
 		"metadata":
 		{
-			"name": "Kanos Plugin",
+			"name": "Gift Wrap",
 			"description": "A loader plugin test.",
 			"contributors":
 			{
@@ -18,10 +18,10 @@
 	},
 	"experimental_quilt_loader_plugin":
 	{
-		"class": "virtuoel.kanos_plugin.KanosPlugin",
+		"class": "virtuoel.gift_wrap.GiftWrapPlugin",
 		"packages":
 		[
-			"virtuoel.kanos_plugin"
+			"virtuoel.gift_wrap"
 		]
 	}
 }
