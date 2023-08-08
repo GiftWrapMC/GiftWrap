@@ -12,6 +12,7 @@ import org.quiltmc.loader.api.plugin.ModLocation;
 import org.quiltmc.loader.api.plugin.ModMetadataExt;
 import org.quiltmc.loader.api.plugin.QuiltLoaderPlugin;
 import org.quiltmc.loader.api.plugin.QuiltPluginContext;
+import org.quiltmc.loader.api.plugin.QuiltPluginManager;
 import org.quiltmc.loader.api.plugin.gui.PluginGuiTreeNode;
 import org.quiltmc.loader.api.plugin.solver.ModLoadOption;
 import org.slf4j.Logger;
@@ -34,7 +35,9 @@ public class KanosPlugin implements QuiltLoaderPlugin
 			return null;
 		}
 		
-		Path from = context().manager().getParent(root);
+		QuiltPluginManager manager = context().manager();
+		
+		Path fromPath = manager.getParent(root);
 		
 		QuiltLoaderIcon fileIcon = QuiltLoaderGui.iconJarFile();
 		boolean mandatory = location.isDirect();
@@ -43,7 +46,7 @@ public class KanosPlugin implements QuiltLoaderPlugin
 		
 		Path resourceRoot = root;
 		
-		return new ModLoadOption[] { new KanosModOption(context(), meta, from, fileIcon, resourceRoot, mandatory, requiresRemap) };
+		return new ModLoadOption[] { new KanosModOption(context(), meta, fromPath, fileIcon, resourceRoot, mandatory, requiresRemap) };
 	}
 	
 	public QuiltPluginContext context()
