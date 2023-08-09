@@ -28,6 +28,10 @@ public class GiftWrapLanguageAdapter implements LanguageAdapter
 					{
 						throw new RuntimeException(e);
 					}
+					catch (Throwable e)
+					{
+						e.printStackTrace();
+					}
 				}
 			};
 			return t;
