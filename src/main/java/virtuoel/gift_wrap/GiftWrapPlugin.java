@@ -2,6 +2,7 @@ package virtuoel.gift_wrap;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 
 import org.quiltmc.loader.api.FasterFiles;
@@ -41,12 +42,20 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		
 		QuiltLoaderIcon fileIcon = QuiltLoaderGui.iconJarFile();
 		boolean mandatory = location.isDirect();
-		ModMetadataExt meta = GiftWrapModMetadataReader.parseMetadata(modsToml);
 		boolean requiresRemap = !location.onClasspath();
+		
+		List<ModMetadataExt> metadata = GiftWrapModMetadataReader.parseMetadata(modsToml);
 		
 		Path resourceRoot = root;
 		
-		return new ModLoadOption[] { new GiftWrapModOption(context(), meta, fromPath, fileIcon, resourceRoot, mandatory, requiresRemap) };
+		ModLoadOption[] options = new ModLoadOption[metadata.size()];
+		
+		for (int i = 0; i < options.length; i++)
+		{
+			options[i] = new GiftWrapModOption(context(), metadata.get(i), fromPath, fileIcon, resourceRoot, mandatory, requiresRemap);
+		}
+		
+		return options;
 	}
 	
 	public QuiltPluginContext context()
