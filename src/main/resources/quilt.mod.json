@@ -14,7 +14,11 @@
 				"Virtuoel": "Author"
 			}
 		},
-		"intermediate_mappings": "net.fabricmc:intermediary"
+		"intermediate_mappings": "net.fabricmc:intermediary",
+		"language_adapters":
+		{
+			"gift_wrap": "virtuoel.gift_wrap.GiftWrapLanguageAdapter"
+		}
 	},
 	"experimental_quilt_loader_plugin":
 	{
