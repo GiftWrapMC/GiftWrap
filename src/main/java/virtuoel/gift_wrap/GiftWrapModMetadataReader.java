@@ -1,6 +1,7 @@
 package virtuoel.gift_wrap;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -120,22 +121,24 @@ public class GiftWrapModMetadataReader
 			
 			try
 			{
-				Files.find(modsToml.getParent().getParent(), Integer.MAX_VALUE, (p, a) ->
+				Files.walk(modsToml.getParent().getParent()).forEach(p ->
 				{
-					return p.toString().endsWith(".class");
-				})
-				.forEach(p ->
-				{
-					try
+					final String name = p.toString();
+					
+					if (!name.endsWith(".class"))
 					{
-						new ClassReader(Files.newInputStream(p)).accept(new ClassVisitor(Opcodes.ASM9)
+						return;
+					}
+					
+					try (final InputStream in = Files.newInputStream(p))
+					{
+						new ClassReader(in).accept(new ClassVisitor(Opcodes.ASM9)
 						{
 							@Override
 							public AnnotationVisitor visitAnnotation(final String descriptor, final boolean visible)
 							{
 								if ("Lnet/minecraftforge/fml/common/Mod;".equals(descriptor))
 								{
-									final String name = p.toString();
 									modClasses.add(name.substring(1, name.length() - 6).replace('/', '.'));
 								}
 								
