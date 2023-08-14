@@ -1,6 +1,8 @@
 package virtuoel.gift_wrap;
 
 import java.io.IOException;
+import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +20,15 @@ import org.quiltmc.loader.api.plugin.gui.PluginGuiTreeNode;
 import org.quiltmc.loader.api.plugin.solver.ModLoadOption;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import net.fabricmc.mappingio.format.TsrgReader;
+import net.fabricmc.mappingio.tree.MappingTree;
+import net.fabricmc.mappingio.tree.MemoryMappingTree;
+import net.fabricmc.tinyremapper.IMappingProvider;
+import net.fabricmc.tinyremapper.InputTag;
+import net.fabricmc.tinyremapper.NonClassCopyMode;
+import net.fabricmc.tinyremapper.OutputConsumerPath;
+import net.fabricmc.tinyremapper.TinyRemapper;
 
 public class GiftWrapPlugin implements QuiltLoaderPlugin
 {
@@ -46,7 +57,70 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		
 		List<ModMetadataExt> metadata = GiftWrapModMetadataReader.parseMetadata(modsToml);
 		
+		ModMetadataExt meta = metadata.get(0);
+		
 		Path resourceRoot = root;
+		Path memoryFs = manager.createMemoryFileSystem(meta.group() + ":" + meta.id());
+		
+		Path cache = manager.getCacheDirectory();
+		
+		String version = "1.20.1";
+		Path tsrg = cache.resolve("forge/" + version + "/joined.tsrg");
+		
+		if (Files.notExists(tsrg))
+		{
+			LOGGER.info("Getting tsrg");
+			Files.createDirectories(tsrg.getParent());
+			URL url = new URL("https://raw.githubusercontent.com/neoforged/NeoForm/main/versions/release/" + version + "/joined.tsrg");
+			Files.copy(url.openStream(), tsrg);
+			LOGGER.info("Done");
+		}
+		
+		MemoryMappingTree tree = new MemoryMappingTree();
+		TsrgReader.read(Files.newBufferedReader(tsrg), tree);
+		
+		String from = "obf";
+		String to = "srg";
+		IMappingProvider tsrgMappings = (acceptor) -> {
+			for (MappingTree.ClassMapping classDef : tree.getClasses())
+			{
+				String className = classDef.getName(from);
+				acceptor.acceptClass(className, classDef.getName(to));
+				
+				for (MappingTree.FieldMapping field : classDef.getFields())
+				{
+					acceptor.acceptField(new IMappingProvider.Member(className, field.getName(from), field.getDesc(from)), field.getName(to));
+				}
+				
+				for (MappingTree.MethodMapping method : classDef.getMethods())
+				{
+					IMappingProvider.Member methodIdentifier = new IMappingProvider.Member(className, method.getName(from), method.getDesc(from));
+					acceptor.acceptMethod(methodIdentifier, method.getName(to));
+				}
+			}
+		};
+		
+		TinyRemapper remapper = TinyRemapper.newRemapper()
+			.withMappings(tsrgMappings)
+			.renameInvalidLocals(false)
+			.ignoreFieldDesc(true)
+			.build();
+		
+		Path remappedPath = cache.resolve("forge/remapped/" + meta.id());
+		if (Files.notExists(remappedPath))
+		{
+			Files.createDirectories(remappedPath.getParent());
+			
+			InputTag tag = remapper.createInputTag();
+			remapper.readInputsAsync(tag, resourceRoot.toAbsolutePath());
+			OutputConsumerPath outputConsumer = new OutputConsumerPath.Builder(remappedPath).build();
+			outputConsumer.addNonClassFiles(resourceRoot, NonClassCopyMode.FIX_META_INF, remapper);
+			remapper.apply(outputConsumer, tag);
+			remapper.finish();
+			outputConsumer.close();
+		}
+		
+		Files.copy(remappedPath, memoryFs.resolve(meta.id()));
 		
 		ModLoadOption[] options = new ModLoadOption[metadata.size()];
 		
