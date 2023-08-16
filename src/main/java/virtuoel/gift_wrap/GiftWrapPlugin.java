@@ -49,6 +49,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 	
 	private QuiltPluginContext context;
+	private IMappingProvider mappings;
 	
 	@Override
 	public ModLoadOption[] scanZip(Path root, ModLocation location, PluginGuiTreeNode guiNode) throws IOException
@@ -76,40 +77,8 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		
 		Path cache = manager.getCacheDirectory();
 		
-		String version = "1.20.1";
-		Path tsrg = cache.resolve("forge/" + version + "/joined.tsrg");
-		
-		if (Files.notExists(tsrg))
-		{
-			LOGGER.info("Getting tsrg");
-			Files.createDirectories(tsrg.getParent());
-			URL url = new URL("https://raw.githubusercontent.com/neoforged/NeoForm/main/versions/release/" + version + "/joined.tsrg");
-			Files.copy(url.openStream(), tsrg);
-			LOGGER.info("Done");
-		}
-		
-		Path clientMappings = cache.resolve("forge/" + version + "/client.txt");
-		
-		if (Files.notExists(clientMappings))
-		{
-			LOGGER.info("Getting client.txt");
-			Files.createDirectories(clientMappings.getParent());
-			URL url = new URL("https://piston-data.mojang.com/v1/objects/6c48521eed01fe2e8ecdadbd5ae348415f3c47da/client.txt");
-			Files.copy(url.openStream(), clientMappings);
-			LOGGER.info("Done");
-		}
-		
-		MemoryMappingTree tree = new MemoryMappingTree();
-		
-		ProGuardReader.read(Files.newBufferedReader(clientMappings), "mojang", "official", tree);
-		TsrgReader.read(Files.newBufferedReader(tsrg), new MappingNsRenamer(tree, Map.of("obf", "official")));
-		loadIntermediary(tree);
-		
-		boolean development = Boolean.parseBoolean(System.getProperty(SystemProperties.DEVELOPMENT, "false"));
-		IMappingProvider mappings = createMappingProvider(tree, "mojang", "srg", development ? "named" : "intermediary");
-		
 		TinyRemapper remapper = TinyRemapper.newRemapper()
-			.withMappings(mappings)
+			.withMappings(mappings("1.20.1"))
 			.renameInvalidLocals(false)
 			.ignoreFieldDesc(true)
 			.ignoreConflicts(true)
@@ -173,7 +142,8 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 	
 	public static IMappingProvider createMappingProvider(MemoryMappingTree tree, String classSrc, String src, String dst)
 	{
-		return (acceptor) -> {
+		return (acceptor) ->
+		{
 			for (MappingTree.ClassMapping classDef : tree.getClasses())
 			{
 				String className = classDef.getName(classSrc);
@@ -185,14 +155,14 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 				{
 					dstName = field.getName(dst);
 					if (dstName == null) continue;
-					acceptor.acceptField(new IMappingProvider.Member(className, field.getName(src), field.getDesc(src)), dstName);
+					acceptor.acceptField(new IMappingProvider.Member(className, field.getName(src), field.getDesc(classSrc)), dstName);
 				}
 				
 				for (MappingTree.MethodMapping method : classDef.getMethods())
 				{
 					dstName = method.getName(dst);
 					if (dstName == null) continue;
-					acceptor.acceptMethod(new IMappingProvider.Member(className, method.getName(src), method.getDesc(src)), dstName);
+					acceptor.acceptMethod(new IMappingProvider.Member(className, method.getName(src), method.getDesc(classSrc)), dstName);
 				}
 			}
 		};
@@ -201,6 +171,46 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 	public QuiltPluginContext context()
 	{
 		return context;
+	}
+	
+	public IMappingProvider mappings(String version) throws IOException
+	{
+		if (mappings == null)
+		{
+			Path cache = context().manager().getCacheDirectory();
+			Path tsrg = cache.resolve("forge/" + version + "/joined.tsrg");
+			
+			if (Files.notExists(tsrg))
+			{
+				LOGGER.info("Getting tsrg");
+				Files.createDirectories(tsrg.getParent());
+				URL url = new URL("https://raw.githubusercontent.com/neoforged/NeoForm/main/versions/release/" + version + "/joined.tsrg");
+				Files.copy(url.openStream(), tsrg);
+				LOGGER.info("Done");
+			}
+			
+			Path clientMappings = cache.resolve("forge/" + version + "/client.txt");
+			
+			if (Files.notExists(clientMappings))
+			{
+				LOGGER.info("Getting client.txt");
+				Files.createDirectories(clientMappings.getParent());
+				URL url = new URL("https://piston-data.mojang.com/v1/objects/6c48521eed01fe2e8ecdadbd5ae348415f3c47da/client.txt");
+				Files.copy(url.openStream(), clientMappings);
+				LOGGER.info("Done");
+			}
+			
+			MemoryMappingTree tree = new MemoryMappingTree();
+			
+			ProGuardReader.read(Files.newBufferedReader(clientMappings), "mojang", "official", tree);
+			TsrgReader.read(Files.newBufferedReader(tsrg), new MappingNsRenamer(tree, Map.of("obf", "official")));
+			loadIntermediary(tree);
+			
+			boolean development = Boolean.parseBoolean(System.getProperty(SystemProperties.DEVELOPMENT, "false"));
+			mappings = createMappingProvider(tree, "mojang", "srg", development ? "named" : "intermediary");
+		}
+		
+		return mappings;
 	}
 	
 	@Override
