@@ -77,7 +77,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		
 		Path cache = manager.getCacheDirectory();
 		
-		Path remappedMinecraft = cache.resolve("forge/remapped/minecraft_client");
+		Path remappedMinecraft = cache.resolve("forge/remapped/minecraft");
 		if (Files.notExists(remappedMinecraft))
 		{
 			Path minecraftRoot = manager.getAllMods("minecraft").stream().findFirst().get().resourceRoot();
@@ -243,9 +243,21 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 			LOGGER.info("Done");
 		}
 		
+		Path serverMappings = cache.resolve("forge/" + version + "/server.txt");
+		
+		if (Files.notExists(serverMappings))
+		{
+			LOGGER.info("Getting server.txt");
+			Files.createDirectories(serverMappings.getParent());
+			URL url = new URL("https://piston-data.mojang.com/v1/objects/0b4dba049482496c507b2387a73a913230ebbd76/server.txt");
+			Files.copy(url.openStream(), serverMappings);
+			LOGGER.info("Done");
+		}
+		
 		MemoryMappingTree tree = new MemoryMappingTree();
 		
 		ProGuardReader.read(Files.newBufferedReader(clientMappings), "mojang", "official", tree);
+		ProGuardReader.read(Files.newBufferedReader(serverMappings), "mojang", "official", tree);
 		TsrgReader.read(Files.newBufferedReader(tsrg), new MappingNsRenamer(tree, Map.of("obf", "official")));
 		loadIntermediary(tree);
 		
