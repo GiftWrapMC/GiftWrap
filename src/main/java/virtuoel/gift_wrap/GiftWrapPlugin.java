@@ -140,29 +140,32 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		}
 	}
 	
-	public static IMappingProvider createMappingProvider(MemoryMappingTree tree, String classSrc, String src, String dst)
+	public static IMappingProvider createMappingProvider(MemoryMappingTree tree, String classSrc, String classDst, String src, String dst)
 	{
 		return (acceptor) ->
 		{
 			for (MappingTree.ClassMapping classDef : tree.getClasses())
 			{
 				String className = classDef.getName(classSrc);
-				String dstName = classDef.getName(dst);
-				if (dstName == null) continue;
+				String dstName = classDef.getName(classDst);
+				if (className == null || dstName == null) continue;
 				acceptor.acceptClass(className, dstName);
 				
+				String srcName;
 				for (MappingTree.FieldMapping field : classDef.getFields())
 				{
+					srcName = field.getName(src);
 					dstName = field.getName(dst);
-					if (dstName == null) continue;
-					acceptor.acceptField(new IMappingProvider.Member(className, field.getName(src), field.getDesc(classSrc)), dstName);
+					if (srcName == null || dstName == null) continue;
+					acceptor.acceptField(new IMappingProvider.Member(className, srcName, field.getDesc(classSrc)), dstName);
 				}
 				
 				for (MappingTree.MethodMapping method : classDef.getMethods())
 				{
+					srcName = method.getName(src);
 					dstName = method.getName(dst);
-					if (dstName == null) continue;
-					acceptor.acceptMethod(new IMappingProvider.Member(className, method.getName(src), method.getDesc(classSrc)), dstName);
+					if (srcName == null || dstName == null) continue;
+					acceptor.acceptMethod(new IMappingProvider.Member(className, srcName, method.getDesc(classSrc)), dstName);
 				}
 			}
 		};
@@ -177,40 +180,46 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 	{
 		if (mappings == null)
 		{
-			Path cache = context().manager().getCacheDirectory();
-			Path tsrg = cache.resolve("forge/" + version + "/joined.tsrg");
-			
-			if (Files.notExists(tsrg))
-			{
-				LOGGER.info("Getting tsrg");
-				Files.createDirectories(tsrg.getParent());
-				URL url = new URL("https://raw.githubusercontent.com/neoforged/NeoForm/main/versions/release/" + version + "/joined.tsrg");
-				Files.copy(url.openStream(), tsrg);
-				LOGGER.info("Done");
-			}
-			
-			Path clientMappings = cache.resolve("forge/" + version + "/client.txt");
-			
-			if (Files.notExists(clientMappings))
-			{
-				LOGGER.info("Getting client.txt");
-				Files.createDirectories(clientMappings.getParent());
-				URL url = new URL("https://piston-data.mojang.com/v1/objects/6c48521eed01fe2e8ecdadbd5ae348415f3c47da/client.txt");
-				Files.copy(url.openStream(), clientMappings);
-				LOGGER.info("Done");
-			}
-			
-			MemoryMappingTree tree = new MemoryMappingTree();
-			
-			ProGuardReader.read(Files.newBufferedReader(clientMappings), "mojang", "official", tree);
-			TsrgReader.read(Files.newBufferedReader(tsrg), new MappingNsRenamer(tree, Map.of("obf", "official")));
-			loadIntermediary(tree);
-			
 			boolean development = Boolean.parseBoolean(System.getProperty(SystemProperties.DEVELOPMENT, "false"));
-			mappings = createMappingProvider(tree, "mojang", "srg", development ? "named" : "intermediary");
+			String dst = development ? "named" : "intermediary";
+			mappings = createMappingProvider(tree(version), "mojang", dst, "srg", dst);
 		}
 		
 		return mappings;
+	}
+	
+	public MemoryMappingTree tree(String version) throws IOException
+	{
+		Path cache = context().manager().getCacheDirectory();
+		Path tsrg = cache.resolve("forge/" + version + "/joined.tsrg");
+		
+		if (Files.notExists(tsrg))
+		{
+			LOGGER.info("Getting tsrg");
+			Files.createDirectories(tsrg.getParent());
+			URL url = new URL("https://raw.githubusercontent.com/neoforged/NeoForm/main/versions/release/" + version + "/joined.tsrg");
+			Files.copy(url.openStream(), tsrg);
+			LOGGER.info("Done");
+		}
+		
+		Path clientMappings = cache.resolve("forge/" + version + "/client.txt");
+		
+		if (Files.notExists(clientMappings))
+		{
+			LOGGER.info("Getting client.txt");
+			Files.createDirectories(clientMappings.getParent());
+			URL url = new URL("https://piston-data.mojang.com/v1/objects/6c48521eed01fe2e8ecdadbd5ae348415f3c47da/client.txt");
+			Files.copy(url.openStream(), clientMappings);
+			LOGGER.info("Done");
+		}
+		
+		MemoryMappingTree tree = new MemoryMappingTree();
+		
+		ProGuardReader.read(Files.newBufferedReader(clientMappings), "mojang", "official", tree);
+		TsrgReader.read(Files.newBufferedReader(tsrg), new MappingNsRenamer(tree, Map.of("obf", "official")));
+		loadIntermediary(tree);
+		
+		return tree;
 	}
 	
 	@Override
