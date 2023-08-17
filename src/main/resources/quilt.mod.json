@@ -24,6 +24,13 @@
 	[
 		"gift_wrap.mixins.json"
 	],
+	"modmenu":
+	{
+		"badges":
+		[
+			"library"
+		]
+	},
 	"experimental_quilt_loader_plugin":
 	{
 		"class": "virtuoel.gift_wrap.GiftWrapPlugin",
