@@ -145,9 +145,12 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 	public void loadIntermediary(final MappingVisitor visitor)
 	{
 		final Enumeration<URL> urls;
-		try {
+		try
+		{
 			urls = MappingConfiguration.class.getClassLoader().getResources("mappings/mappings.tiny");
-		} catch (IOException e) {
+		}
+		catch (IOException e)
+		{
 			throw new UncheckedIOException("Error trying to locate mappings", e);
 		}
 		
