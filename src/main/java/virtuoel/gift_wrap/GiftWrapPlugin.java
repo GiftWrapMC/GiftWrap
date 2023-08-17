@@ -77,18 +77,48 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		
 		Path cache = manager.getCacheDirectory();
 		
-		TinyRemapper remapper = TinyRemapper.newRemapper()
-			.withMappings(mappings("1.20.1"))
-			.renameInvalidLocals(false)
-			.ignoreFieldDesc(true)
-			.ignoreConflicts(true)
-			.build();
-		
-		remapper.getEnvironment();
+		Path remappedMinecraft = cache.resolve("forge/remapped/minecraft_client");
+		if (Files.notExists(remappedMinecraft))
+		{
+			Path minecraftRoot = manager.getAllMods("minecraft").stream().findFirst().get().resourceRoot();
+			
+			boolean development = Boolean.parseBoolean(System.getProperty(SystemProperties.DEVELOPMENT, "false"));
+			String src = development ? "named" : "intermediary";
+			
+			TinyRemapper remapper = TinyRemapper.newRemapper()
+				.withMappings(createMappingProvider(tree("1.20.1"), src, "mojang", src, "srg"))
+				.renameInvalidLocals(false)
+				.ignoreFieldDesc(true)
+				.ignoreConflicts(true)
+				.build();
+			
+			remapper.getEnvironment();
+			
+			Files.createDirectories(remappedMinecraft.getParent());
+			
+			InputTag tag = remapper.createInputTag();
+			remapper.readInputsAsync(tag, minecraftRoot.toAbsolutePath());
+			OutputConsumerPath outputConsumer = new OutputConsumerPath.Builder(remappedMinecraft).build();
+			outputConsumer.addNonClassFiles(minecraftRoot, NonClassCopyMode.FIX_META_INF, remapper);
+			remapper.apply(outputConsumer, tag);
+			remapper.finish();
+			outputConsumer.close();
+		}
 		
 		Path remappedPath = cache.resolve("forge/remapped/" + meta.id());
 		if (Files.notExists(remappedPath))
 		{
+			TinyRemapper remapper = TinyRemapper.newRemapper()
+				.withMappings(mappings("1.20.1"))
+				.renameInvalidLocals(false)
+				.ignoreFieldDesc(true)
+				.ignoreConflicts(true)
+				.build();
+			
+			remapper.readClassPath(remappedMinecraft);
+			
+			remapper.getEnvironment();
+			
 			Files.createDirectories(remappedPath.getParent());
 			
 			InputTag tag = remapper.createInputTag();
