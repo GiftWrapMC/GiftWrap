@@ -36,6 +36,16 @@
 		"class": "virtuoel.gift_wrap.GiftWrapPlugin",
 		"packages":
 		[
+			"virtuoel.gift_wrap.shadow.nightconfig.core",
+			"virtuoel.gift_wrap.shadow.nightconfig.core.conversion",
+			"virtuoel.gift_wrap.shadow.nightconfig.core.file",
+			"virtuoel.gift_wrap.shadow.nightconfig.core.io",
+			"virtuoel.gift_wrap.shadow.nightconfig.core.utils",
+			"virtuoel.gift_wrap.shadow.nightconfig.toml",
+			"virtuoel.gift_wrap.shadow.mappingio",
+			"virtuoel.gift_wrap.shadow.mappingio.adapter",
+			"virtuoel.gift_wrap.shadow.mappingio.format",
+			"virtuoel.gift_wrap.shadow.mappingio.tree",
 			"virtuoel.gift_wrap"
 		]
 	}
