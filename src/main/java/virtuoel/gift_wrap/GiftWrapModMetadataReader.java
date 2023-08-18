@@ -117,7 +117,7 @@ public class GiftWrapModMetadataReader
 			modmenu.put("update_checker", new TomlLoaderValue.BooleanImpl(VALUE_LOCATION, false));
 			customValues.put("modmenu", new TomlLoaderValue.ObjectImpl(VALUE_LOCATION, modmenu));
 			
-			final Collection<String> modClasses = new ArrayList<>();
+			final Map<String, String> modClasses = new HashMap<>();
 			
 			try
 			{
@@ -132,19 +132,20 @@ public class GiftWrapModMetadataReader
 					
 					try (final InputStream in = Files.newInputStream(p))
 					{
-						new ClassReader(in).accept(new ClassVisitor(Opcodes.ASM9)
+						ClassVisitor classVisitor = new ClassVisitor(Opcodes.ASM9)
 						{
 							@Override
 							public AnnotationVisitor visitAnnotation(final String descriptor, final boolean visible)
 							{
 								if ("Lnet/minecraftforge/fml/common/Mod;".equals(descriptor))
 								{
-									modClasses.add(name.substring(1, name.length() - 6).replace('/', '.'));
+									modClasses.put(name, name.substring(1, name.length() - 6).replace('/', '.'));
 								}
 								
 								return null;
 							}
-						}, ClassReader.SKIP_CODE | ClassReader.SKIP_FRAMES);
+						};
+						new ClassReader(in).accept(classVisitor, ClassReader.SKIP_CODE | ClassReader.SKIP_FRAMES);
 					}
 					catch (IOException e)
 					{
@@ -160,7 +161,7 @@ public class GiftWrapModMetadataReader
 			final Map<String, Collection<AdapterLoadableClassEntry>> entrypoints = new HashMap<>();
 			final Collection<AdapterLoadableClassEntry> initEntrypoints = new ArrayList<>();
 			
-			for (final String modClass : modClasses)
+			for (final String modClass : modClasses.values())
 			{
 				try
 				{
