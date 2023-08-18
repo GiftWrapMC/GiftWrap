@@ -1,8 +1,6 @@
 package virtuoel.gift_wrap;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -14,10 +12,6 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import org.jetbrains.annotations.Nullable;
-import org.objectweb.asm.AnnotationVisitor;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.Opcodes;
 import org.quiltmc.loader.api.LoaderValue;
 import org.quiltmc.loader.api.ModContributor;
 import org.quiltmc.loader.api.ModDependency;
@@ -117,76 +111,18 @@ public class GiftWrapModMetadataReader
 			modmenu.put("update_checker", new TomlLoaderValue.BooleanImpl(VALUE_LOCATION, false));
 			customValues.put("modmenu", new TomlLoaderValue.ObjectImpl(VALUE_LOCATION, modmenu));
 			
-			final Map<String, String> modClasses = new HashMap<>();
-			
-			try
-			{
-				Files.walk(modsToml.getParent().getParent()).forEach(p ->
-				{
-					final String name = p.toString();
-					
-					if (!name.endsWith(".class"))
-					{
-						return;
-					}
-					
-					try (final InputStream in = Files.newInputStream(p))
-					{
-						ClassVisitor classVisitor = new ClassVisitor(Opcodes.ASM9)
-						{
-							@Override
-							public AnnotationVisitor visitAnnotation(final String descriptor, final boolean visible)
-							{
-								if ("Lnet/minecraftforge/fml/common/Mod;".equals(descriptor))
-								{
-									modClasses.put(name, name.substring(1, name.length() - 6).replace('/', '.'));
-								}
-								
-								return null;
-							}
-						};
-						new ClassReader(in).accept(classVisitor, ClassReader.SKIP_CODE | ClassReader.SKIP_FRAMES);
-					}
-					catch (IOException e)
-					{
-						e.printStackTrace();
-					}
-				});
-			}
-			catch (IOException e)
-			{
-				e.printStackTrace();
-			}
-			
 			final Map<String, Collection<AdapterLoadableClassEntry>> entrypoints = new HashMap<>();
-			final Collection<AdapterLoadableClassEntry> initEntrypoints = new ArrayList<>();
-			
-			for (final String modClass : modClasses.values())
-			{
-				try
-				{
-					initEntrypoints.add(AdapterLoadableClassEntry.class.getConstructor(String.class, String.class).newInstance("gift_wrap", modClass));
-				}
-				catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException e)
-				{
-					e.printStackTrace();
-				}
-			}
-			
-			entrypoints.put("init", initEntrypoints);
 			
 			final Collection<String> accessWideners = new ArrayList<>();
-			// TODO
 			
-			final Collection<String> mixins = new ArrayList<>();
-			// TODO
+			final Map<EnvType, Collection<String>> mixins = new HashMap<>();
 			
 			metadata.add(new ModMetadataExt()
 			{
 				@Override
 				public Collection<String> mixins(EnvType env)
 				{
-					return mixins;
+					return mixins.computeIfAbsent(env, $ -> new ArrayList<>());
 				}
 				
 				@Override

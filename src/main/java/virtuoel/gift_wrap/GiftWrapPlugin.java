@@ -130,6 +130,8 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 			outputConsumer.close();
 		}
 		
+		GiftWrapModScanner.scanModClasses(remappedPath, meta);
+		
 		Files.copy(resourceRoot = remappedPath, memoryFs.resolve(meta.id()));
 		
 		ModLoadOption[] options = new ModLoadOption[metadata.size()];
