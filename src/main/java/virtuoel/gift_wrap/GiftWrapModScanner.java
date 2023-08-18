@@ -13,6 +13,7 @@ import java.util.Map;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.quiltmc.loader.api.plugin.ModMetadataExt;
 import org.quiltmc.loader.impl.metadata.qmj.AdapterLoadableClassEntry;
@@ -46,6 +47,15 @@ public class GiftWrapModScanner
 				
 				try (final InputStream in = Files.newInputStream(p))
 				{
+					MethodVisitor methodVisitor = new MethodVisitor(Opcodes.ASM9)
+					{
+						@Override
+						public AnnotationVisitor visitAnnotation(String descriptor, boolean visible)
+						{
+							return null;
+						}
+					};
+					
 					ClassVisitor classVisitor = new ClassVisitor(Opcodes.ASM9)
 					{
 						@Override
@@ -57,6 +67,12 @@ public class GiftWrapModScanner
 							}
 							
 							return null;
+						}
+						
+						@Override
+						public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions)
+						{
+							return methodVisitor;
 						}
 					};
 					
