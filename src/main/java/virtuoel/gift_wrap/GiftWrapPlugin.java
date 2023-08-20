@@ -109,7 +109,8 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		}
 		
 		Path remappedPath = cache.resolve("forge/remapped/" + meta.id());
-		if (Files.notExists(remappedPath))
+		boolean firstScan = Files.notExists(remappedPath);
+		if (firstScan)
 		{
 			TinyRemapper remapper = TinyRemapper.newRemapper()
 				.withMappings(mappingProvider())
@@ -133,7 +134,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 			outputConsumer.close();
 		}
 		
-		GiftWrapModScanner.scanModClasses(remappedPath, meta);
+		GiftWrapModScanner.scanModClasses(remappedPath, meta, firstScan);
 		
 		Files.copy(resourceRoot = remappedPath, memoryFs.resolve(meta.id()));
 		

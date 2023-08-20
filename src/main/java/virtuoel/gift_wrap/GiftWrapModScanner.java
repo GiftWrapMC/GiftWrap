@@ -25,7 +25,7 @@ import net.minecraft.item.ItemGroup;
 
 public class GiftWrapModScanner
 {
-	public static void scanModClasses(Path modRoot, ModMetadataExt metadata)
+	public static void scanModClasses(Path modRoot, ModMetadataExt metadata, boolean shouldPatch)
 	{
 		final Map<String, Collection<AdapterLoadableClassEntry>> entrypoints = metadata.getEntrypoints();
 		final Collection<AdapterLoadableClassEntry> initEntrypoints = new ArrayList<>();
@@ -52,7 +52,7 @@ public class GiftWrapModScanner
 				try (final InputStream in = Files.newInputStream(p))
 				{
 					boolean[] patched = { false };
-					ClassWriter writer = new ClassWriter(0);
+					ClassWriter writer = shouldPatch ? new ClassWriter(0) : null;
 					ClassVisitor classVisitor = new ClassVisitor(Opcodes.ASM9, writer)
 					{
 						@Override
@@ -80,12 +80,15 @@ public class GiftWrapModScanner
 								@Override
 								public void visitMethodInsn(int opcode, String owner, String insnName, String descriptor, boolean isInterface)
 								{
-									// TODO make better and only run once
-									if ("builder".equals(insnName) && ItemGroup.class.getName().equals(owner.replace('/', '.')))
+									if (shouldPatch)
 									{
-										super.visitMethodInsn(opcode, "virtuoel/gift_wrap/hooks/ItemGroupHooks", insnName, descriptor, isInterface);
-										patched[0] = true;
-										return;
+										// TODO make better and only run once
+										if ("builder".equals(insnName) && ItemGroup.class.getName().equals(owner.replace('/', '.')))
+										{
+											super.visitMethodInsn(opcode, "virtuoel/gift_wrap/hooks/ItemGroupHooks", insnName, descriptor, isInterface);
+											patched[0] = true;
+											return;
+										}
 									}
 									super.visitMethodInsn(opcode, owner, insnName, descriptor, isInterface);
 								}
@@ -96,7 +99,7 @@ public class GiftWrapModScanner
 					ClassReader reader = new ClassReader(in);
 					reader.accept(classVisitor, 0);
 					
-					if (patched[0])
+					if (shouldPatch && patched[0])
 					{
 						patchedBytes = writer.toByteArray();
 					}
