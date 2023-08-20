@@ -2,6 +2,7 @@ package virtuoel.gift_wrap;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,12 +14,14 @@ import java.util.Map;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.quiltmc.loader.api.plugin.ModMetadataExt;
 import org.quiltmc.loader.impl.metadata.qmj.AdapterLoadableClassEntry;
 
 import net.fabricmc.api.EnvType;
+import net.minecraft.item.ItemGroup;
 
 public class GiftWrapModScanner
 {
@@ -45,18 +48,12 @@ public class GiftWrapModScanner
 					return;
 				}
 				
+				byte[] patchedBytes = null;
 				try (final InputStream in = Files.newInputStream(p))
 				{
-					MethodVisitor methodVisitor = new MethodVisitor(Opcodes.ASM9)
-					{
-						@Override
-						public AnnotationVisitor visitAnnotation(String descriptor, boolean visible)
-						{
-							return null;
-						}
-					};
-					
-					ClassVisitor classVisitor = new ClassVisitor(Opcodes.ASM9)
+					boolean[] patched = { false };
+					ClassWriter writer = new ClassWriter(0);
+					ClassVisitor classVisitor = new ClassVisitor(Opcodes.ASM9, writer)
 					{
 						@Override
 						public AnnotationVisitor visitAnnotation(final String descriptor, final boolean visible)
@@ -66,21 +63,59 @@ public class GiftWrapModScanner
 								modClasses.put(fileName, fileName.substring(0, fileName.length() - 6).replace('/', '.'));
 							}
 							
-							return null;
+							return super.visitAnnotation(descriptor, visible);
 						}
 						
 						@Override
 						public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions)
 						{
-							return methodVisitor;
+							return new MethodVisitor(Opcodes.ASM9, super.visitMethod(access, name, descriptor, signature, exceptions))
+							{
+								@Override
+								public AnnotationVisitor visitAnnotation(String annotationDescriptor, boolean visible)
+								{
+									return super.visitAnnotation(annotationDescriptor, visible);
+								}
+								
+								@Override
+								public void visitMethodInsn(int opcode, String owner, String insnName, String descriptor, boolean isInterface)
+								{
+									// TODO make better and only run once
+									if ("builder".equals(insnName) && ItemGroup.class.getName().equals(owner.replace('/', '.')))
+									{
+										super.visitMethodInsn(opcode, "virtuoel/gift_wrap/hooks/ItemGroupHooks", insnName, descriptor, isInterface);
+										patched[0] = true;
+										return;
+									}
+									super.visitMethodInsn(opcode, owner, insnName, descriptor, isInterface);
+								}
+							};
 						}
 					};
 					
-					new ClassReader(in).accept(classVisitor, ClassReader.SKIP_CODE | ClassReader.SKIP_FRAMES);
+					ClassReader reader = new ClassReader(in);
+					reader.accept(classVisitor, 0);
+					
+					if (patched[0])
+					{
+						patchedBytes = writer.toByteArray();
+					}
 				}
 				catch (IOException e)
 				{
 					e.printStackTrace();
+				}
+				
+				if (patchedBytes != null)
+				{
+					try (final OutputStream out = Files.newOutputStream(p))
+					{
+						out.write(patchedBytes);
+					}
+					catch (IOException e)
+					{
+						e.printStackTrace();
+					}
 				}
 			});
 		}
