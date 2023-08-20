@@ -48,8 +48,11 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 	
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 	
+	private String version;
+	
 	private QuiltPluginContext context;
-	private IMappingProvider mappings;
+	private MemoryMappingTree mappingTree;
+	private IMappingProvider mappingProvider;
 	
 	@Override
 	public ModLoadOption[] scanZip(Path root, ModLocation location, PluginGuiTreeNode guiNode) throws IOException
@@ -86,7 +89,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 			String src = development ? "named" : "intermediary";
 			
 			TinyRemapper remapper = TinyRemapper.newRemapper()
-				.withMappings(createMappingProvider(tree("1.20.1"), src, "mojang", src, "srg"))
+				.withMappings(createMappingProvider(mappingTree(), src, "mojang", src, "srg"))
 				.renameInvalidLocals(false)
 				.ignoreFieldDesc(true)
 				.ignoreConflicts(true)
@@ -109,7 +112,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		if (Files.notExists(remappedPath))
 		{
 			TinyRemapper remapper = TinyRemapper.newRemapper()
-				.withMappings(mappings("1.20.1"))
+				.withMappings(mappingProvider())
 				.renameInvalidLocals(false)
 				.ignoreFieldDesc(true)
 				.ignoreConflicts(true)
@@ -211,20 +214,27 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		return context;
 	}
 	
-	public IMappingProvider mappings(String version) throws IOException
+	public IMappingProvider mappingProvider() throws IOException
 	{
-		if (mappings == null)
+		if (mappingProvider != null)
 		{
-			boolean development = Boolean.parseBoolean(System.getProperty(SystemProperties.DEVELOPMENT, "false"));
-			String dst = development ? "named" : "intermediary";
-			mappings = createMappingProvider(tree(version), "mojang", dst, "srg", dst);
+			return mappingProvider;
 		}
 		
-		return mappings;
+		boolean development = Boolean.parseBoolean(System.getProperty(SystemProperties.DEVELOPMENT, "false"));
+		String dst = development ? "named" : "intermediary";
+		mappingProvider = createMappingProvider(mappingTree(), "mojang", dst, "srg", dst);
+		
+		return mappingProvider;
 	}
 	
-	public MemoryMappingTree tree(String version) throws IOException
+	public MemoryMappingTree mappingTree() throws IOException
 	{
+		if (mappingTree != null)
+		{
+			return mappingTree;
+		}
+		
 		Path cache = context().manager().getCacheDirectory();
 		Path tsrg = cache.resolve("forge/" + version + "/joined.tsrg");
 		
@@ -259,20 +269,22 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 			LOGGER.info("Done");
 		}
 		
-		MemoryMappingTree tree = new MemoryMappingTree();
+		mappingTree = new MemoryMappingTree();
 		
-		ProGuardReader.read(Files.newBufferedReader(clientMappings), "mojang", "official", tree);
-		ProGuardReader.read(Files.newBufferedReader(serverMappings), "mojang", "official", tree);
-		TsrgReader.read(Files.newBufferedReader(tsrg), new MappingNsRenamer(tree, Map.of("obf", "official")));
-		loadIntermediary(tree);
+		ProGuardReader.read(Files.newBufferedReader(clientMappings), "mojang", "official", mappingTree);
+		ProGuardReader.read(Files.newBufferedReader(serverMappings), "mojang", "official", mappingTree);
+		TsrgReader.read(Files.newBufferedReader(tsrg), new MappingNsRenamer(mappingTree, Map.of("obf", "official")));
+		loadIntermediary(mappingTree);
 		
-		return tree;
+		return mappingTree;
 	}
 	
 	@Override
 	public void load(QuiltPluginContext context, Map<String, LoaderValue> previousData)
 	{
 		this.context = context;
+		
+		this.version = context().manager().getAllMods("minecraft").stream().findFirst().get().version().toString();
 	}
 	
 	@Override
