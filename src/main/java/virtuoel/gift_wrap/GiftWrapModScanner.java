@@ -20,7 +20,6 @@ import org.objectweb.asm.Opcodes;
 import org.quiltmc.loader.api.plugin.ModMetadataExt;
 import org.quiltmc.loader.impl.metadata.qmj.AdapterLoadableClassEntry;
 
-import net.fabricmc.api.EnvType;
 import net.minecraft.item.ItemGroup;
 
 public class GiftWrapModScanner
@@ -29,11 +28,6 @@ public class GiftWrapModScanner
 	{
 		final Map<String, Collection<AdapterLoadableClassEntry>> entrypoints = metadata.getEntrypoints();
 		final Collection<AdapterLoadableClassEntry> initEntrypoints = new ArrayList<>();
-		
-		final Collection<String> accessWideners = metadata.accessWideners();
-		
-		final Collection<String> clientMixins = metadata.mixins(EnvType.CLIENT);
-		final Collection<String> serverMixins = metadata.mixins(EnvType.SERVER);
 		
 		final Map<String, String> modClasses = new HashMap<>();
 		

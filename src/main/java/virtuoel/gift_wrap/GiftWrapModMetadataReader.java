@@ -82,28 +82,39 @@ public class GiftWrapModMetadataReader
 			final String authors = mod.get("authors");
 			final Collection<ModContributor> contributors = authors == null ? Collections.emptyList() : Collections.singletonList(ModContributor.of(authors, Collections.singletonList("Author")));
 			
-			String version = mod.get("version");
+			String[] manifestData = { mod.get("version"), null };
 			
-			if ("${file.jarVersion}".equals(version))
+			try (final Stream<String> lines = Files.lines(modsToml.getParent().resolve("MANIFEST.MF")))
 			{
-				try (final Stream<String> lines = Files.lines(modsToml.getParent().resolve("MANIFEST.MF")))
+				lines.forEach(line ->
 				{
-					version = lines.filter(s -> s.startsWith("Implementation-Version"))
-						.findFirst()
-						.map(s ->
+					if (line.startsWith("Implementation-Version"))
+					{
+						if ("${file.jarVersion}".equals(manifestData[0]))
 						{
-							final int index = s.indexOf(' ');
-							return index == -1 ? null : s.substring(index + 1);
-						})
-						.orElse(version);
-				}
-				catch (IOException e)
-				{
-					
-				}
+							final int index = line.indexOf(' ');
+							if (index != -1)
+							{
+								manifestData[0] = line.substring(index + 1);
+							}
+						}
+					}
+					else if (line.startsWith("MixinConfigs"))
+					{
+						final int index = line.indexOf(' ');
+						if (index != -1)
+						{
+							manifestData[1] = line.substring(index + 1);
+						}
+					}
+				});
+			}
+			catch (IOException e)
+			{
+				e.printStackTrace();
 			}
 			
-			final Version modVersion = Version.of(version);
+			final Version modVersion = Version.of(manifestData[0]);
 			
 			final Map<String, LoaderValue> customValues = new HashMap<>();
 			customValues.put("patchwork:patcherMeta", new TomlLoaderValue.BooleanImpl(VALUE_LOCATION, true));
@@ -115,14 +126,14 @@ public class GiftWrapModMetadataReader
 			
 			final Collection<String> accessWideners = new ArrayList<>();
 			
-			final Map<EnvType, Collection<String>> mixins = new HashMap<>();
+			final Collection<String> mixins = manifestData[1] != null ? Collections.singleton(manifestData[1]) : Collections.emptySet();
 			
 			metadata.add(new ModMetadataExt()
 			{
 				@Override
 				public Collection<String> mixins(EnvType env)
 				{
-					return mixins.computeIfAbsent(env, $ -> new ArrayList<>());
+					return mixins;
 				}
 				
 				@Override
