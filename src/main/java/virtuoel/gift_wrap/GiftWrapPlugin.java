@@ -3,14 +3,17 @@ package virtuoel.gift_wrap;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 import java.util.zip.ZipError;
 
 import org.quiltmc.loader.api.FasterFiles;
@@ -28,6 +31,9 @@ import org.quiltmc.loader.impl.launch.common.MappingConfiguration;
 import org.quiltmc.loader.impl.util.SystemProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 
 import net.fabricmc.mappingio.MappingVisitor;
 import net.fabricmc.mappingio.adapter.MappingNsRenamer;
@@ -132,6 +138,57 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 			remapper.apply(outputConsumer, tag);
 			remapper.finish();
 			outputConsumer.close();
+			
+			Path accessTransformerPath = remappedPath.resolve("META-INF").resolve("accesstransformer.cfg");
+			if (Files.exists(accessTransformerPath))
+			{
+				String accessWidener = meta.id() + ".accesswidener";
+				meta.accessWideners().add(accessWidener);
+				
+				try (final OutputStream out = Files.newOutputStream(remappedPath.resolve(accessWidener)))
+				{
+					StringBuilder text = new StringBuilder("accessWidener\tv2\tintermediary");
+					
+					try (final Stream<String> lines = Files.lines(accessTransformerPath))
+					{
+						lines.forEach(line ->
+						{
+							String[] parts = line.split(" ");
+							
+							String visibility = parts[0];
+							String clazz = parts[1];
+							String desc = parts.length > 2 ? parts[2] : null;
+							
+							text.append('\n');
+							
+							// TODO remap AT
+						});
+					}
+					
+					out.write(text.toString().getBytes(StandardCharsets.UTF_8));
+				}
+				catch (IOException e)
+				{
+					e.printStackTrace();
+				}
+			}
+			
+			meta.mixins(null).stream().findFirst().map(remappedPath::resolve).map(path ->
+			{
+				try
+				{
+					return JsonParser.parseString(Files.readString(path)).getAsJsonObject().asMap().get("refmap");
+				}
+				catch (IOException e)
+				{
+					e.printStackTrace();
+					return null;
+				}
+			})
+			.map(JsonElement::getAsString).ifPresent(refmapPath ->
+			{
+				// TODO remap refmap
+			});
 		}
 		
 		GiftWrapModScanner.scanModClasses(remappedPath, meta, firstScan);
