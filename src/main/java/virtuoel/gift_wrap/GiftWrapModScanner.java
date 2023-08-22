@@ -21,6 +21,10 @@ import org.quiltmc.loader.api.plugin.ModMetadataExt;
 import org.quiltmc.loader.impl.metadata.qmj.AdapterLoadableClassEntry;
 
 import net.minecraft.item.ItemGroup;
+import net.minecraft.registry.tag.BlockTags;
+import net.minecraft.registry.tag.FluidTags;
+import net.minecraft.registry.tag.ItemTags;
+import net.minecraft.util.DyeColor;
 
 public class GiftWrapModScanner
 {
@@ -80,6 +84,30 @@ public class GiftWrapModScanner
 										if ("builder".equals(insnName) && ItemGroup.class.getName().equals(owner.replace('/', '.')))
 										{
 											super.visitMethodInsn(opcode, "virtuoel/gift_wrap/hooks/ItemGroupHooks", insnName, descriptor, isInterface);
+											patched[0] = true;
+											return;
+										}
+										else if ("create".equals(insnName) && BlockTags.class.getName().equals(owner.replace('/', '.')))
+										{
+											super.visitMethodInsn(opcode, "virtuoel/gift_wrap/hooks/BlockTagsHooks", insnName, descriptor, isInterface);
+											patched[0] = true;
+											return;
+										}
+										else if ("create".equals(insnName) && ItemTags.class.getName().equals(owner.replace('/', '.')))
+										{
+											super.visitMethodInsn(opcode, "virtuoel/gift_wrap/hooks/ItemTagsHooks", insnName, descriptor, isInterface);
+											patched[0] = true;
+											return;
+										}
+										else if ("getColor".equals(insnName) && DyeColor.class.getName().equals(owner.replace('/', '.')))
+										{
+											super.visitMethodInsn(opcode, "virtuoel/gift_wrap/hooks/DyeColorHooks", insnName, descriptor, isInterface);
+											patched[0] = true;
+											return;
+										}
+										else if ("create".equals(insnName) && FluidTags.class.getName().equals(owner.replace('/', '.')))
+										{
+											super.visitMethodInsn(opcode, "virtuoel/gift_wrap/hooks/FluidTagsHooks", insnName, descriptor, isInterface);
 											patched[0] = true;
 											return;
 										}
