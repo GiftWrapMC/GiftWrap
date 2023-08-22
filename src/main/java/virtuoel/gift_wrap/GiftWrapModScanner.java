@@ -30,6 +30,13 @@ public class GiftWrapModScanner
 {
 	public static void scanModClasses(Path modRoot, ModMetadataExt metadata, boolean shouldPatch)
 	{
+		final String accessWidener = metadata.id() + ".accesswidener";
+		final Path accessWidenerPath = modRoot.resolve(accessWidener);
+		if (Files.exists(accessWidenerPath))
+		{
+			metadata.accessWideners().add(accessWidener);
+		}
+		
 		final Map<String, Collection<AdapterLoadableClassEntry>> entrypoints = metadata.getEntrypoints();
 		final Collection<AdapterLoadableClassEntry> initEntrypoints = new ArrayList<>();
 		

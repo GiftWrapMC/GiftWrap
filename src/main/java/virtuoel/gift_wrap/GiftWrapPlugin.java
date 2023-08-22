@@ -143,10 +143,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 			Path accessTransformerPath = remappedPath.resolve("META-INF").resolve("accesstransformer.cfg");
 			if (Files.exists(accessTransformerPath))
 			{
-				String accessWidener = meta.id() + ".accesswidener";
-				meta.accessWideners().add(accessWidener);
-				
-				Path accessWidenerPath = remappedPath.resolve(accessWidener);
+				Path accessWidenerPath = remappedPath.resolve(meta.id() + ".accesswidener");
 				if (Files.notExists(accessWidenerPath))
 				{
 					try (final OutputStream out = Files.newOutputStream(accessWidenerPath))
