@@ -158,6 +158,12 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 						{
 							lines.forEach(line ->
 							{
+								line = line.trim();
+								if (line.startsWith("#"))
+								{
+									return;
+								}
+								
 								String[] parts = line.split(" ");
 								
 								String visibility = parts[0];
@@ -166,7 +172,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 								
 								boolean unfinal = visibility.endsWith("-f");
 								
-								if (desc == null)
+								if (desc == null || desc.startsWith("#"))
 								{
 									deferredClasses.put(clazz, unfinal);
 								}
