@@ -124,6 +124,8 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		boolean firstScan = Files.notExists(remappedPath);
 		if (firstScan)
 		{
+			LOGGER.info("Remapping new or changed mod \"{}\"...", meta.id());
+			
 			TinyRemapper remapper = TinyRemapper.newRemapper()
 				.withMappings(mappingProvider())
 				.renameInvalidLocals(false)
@@ -399,6 +401,8 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 					e.printStackTrace();
 				}
 			});
+			
+			LOGGER.info("Done remapping mod \"{}\".", meta.id());
 		}
 		
 		GiftWrapModScanner.scanModClasses(remappedPath, meta, firstScan);
