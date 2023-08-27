@@ -14,6 +14,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.stream.Stream;
 import java.util.zip.ZipError;
 
@@ -33,8 +34,12 @@ import org.quiltmc.loader.impl.util.SystemProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
 
 import net.fabricmc.mappingio.MappingVisitor;
 import net.fabricmc.mappingio.adapter.MappingNsRenamer;
@@ -282,21 +287,117 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 				}
 			}
 			
-			meta.mixins(null).stream().findFirst().map(remappedPath::resolve).map(path ->
+			meta.mixins(null).stream().findFirst().map(remappedPath::resolve).ifPresent(path ->
 			{
 				try
 				{
-					return JsonParser.parseString(Files.readString(path)).getAsJsonObject().asMap().get("refmap");
+					Path refmapPath = remappedPath.resolve(JsonParser.parseString(Files.readString(path)).getAsJsonObject().get("refmap").getAsString());
+					JsonObject refmap = JsonParser.parseString(Files.readString(refmapPath)).getAsJsonObject();
+					
+					JsonObject mappedData = new JsonObject();
+					JsonObject data = refmap.get("data").getAsJsonObject();
+					JsonObject srgData = data.get("searge").getAsJsonObject();
+					data.add("named:intermediary", mappedData);
+					refmap.add("mappings", mappedData);
+					
+					Map<String[], JsonObject> deferredMethods = new HashMap<>();
+					Map<String[], JsonObject> deferredFields = new HashMap<>();
+					String toRemap;
+					JsonObject mapped, mappings;
+					for (String mixinClass : srgData.keySet())
+					{
+						mapped = new JsonObject();
+						mappings = srgData.get(mixinClass).getAsJsonObject();
+						for (final Entry<String, JsonElement> entry : mappings.entrySet())
+						{
+							toRemap = entry.getValue().getAsString();
+							
+							boolean isField = toRemap.contains(":");
+							int nameIndex = toRemap.startsWith("L") ? toRemap.indexOf(';') + 1 : 0;
+							int descIndex = toRemap.indexOf(isField ? ':' : '(');
+							
+							String clazz = nameIndex == 0 ? null : toRemap.substring(1, nameIndex - 1);
+							String name = toRemap.substring(nameIndex, descIndex);
+							String desc = toRemap.substring(descIndex + (isField ? 1 : 0));
+							
+							(isField ? deferredFields : deferredMethods).put(new String[] { entry.getKey(), clazz, name, desc }, mapped);
+						}
+						mappedData.add(mixinClass, mapped);
+					}
+					
+					String dst = "intermediary";
+					String srgClass, clazz, dstName;
+					String[] found;
+					for (MappingTree.ClassMapping c : mappingTree().getClasses())
+					{
+						srgClass = c.getName("mojang");
+						clazz = c.getName(dst);
+						
+						for (MappingTree.MethodMapping m : c.getMethods())
+						{
+							found = null;
+							for (String[] method : deferredMethods.keySet())
+							{
+								if (method[1] != null && method[1].equals(srgClass))
+								{
+									method[1] = clazz;
+								}
+								
+								if (m.getName("srg").equals(method[2]) && m.getDesc("mojang").equals(method[3]))
+								{
+									if ((dstName = m.getName(dst)) != null)
+									{
+										method[2] = dstName;
+										method[3] = m.getDesc(dst);
+										found = method;
+										break;
+									}
+								}
+							}
+							
+							if (found != null)
+							{
+								deferredMethods.remove(found).addProperty(found[0], (found[1] == null ? "" : ("L" + found[1] + ";")) + found[2] + found[3]);
+							}
+						}
+						
+						for (MappingTree.FieldMapping f : c.getFields())
+						{
+							found = null;
+							for (String[] field : deferredFields.keySet())
+							{
+								if (field[1] != null && field[1].equals(srgClass))
+								{
+									field[1] = clazz;
+								}
+								
+								if (f.getName("srg").equals(field[2]) && f.getDesc("mojang").equals(field[3]))
+								{
+									field[2] = f.getName(dst);
+									field[3] = f.getDesc(dst);
+									found = field;
+									break;
+								}
+							}
+							
+							if (found != null)
+							{
+								deferredFields.remove(found).addProperty(found[0], (found[1] == null ? "" : ("L" + found[1] + ";")) + found[2] + ":" + found[3]);
+							}
+						}
+					}
+					
+					try(OutputStream out = Files.newOutputStream(refmapPath))
+					{
+						Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+						
+						out.write(gson.toJson(refmap).getBytes(StandardCharsets.UTF_8));
+					}
 				}
-				catch (IOException e)
+				catch (JsonSyntaxException | IOException e)
 				{
 					e.printStackTrace();
-					return null;
 				}
-			})
-			.map(JsonElement::getAsString).ifPresent(refmapPath ->
-			{
-				// TODO remap refmap
 			});
 		}
 		
