@@ -15,6 +15,7 @@ import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.quiltmc.loader.api.plugin.ModMetadataExt;
@@ -28,6 +29,8 @@ import net.minecraft.util.DyeColor;
 
 public class GiftWrapModScanner
 {
+	public static final Map<String, String> SHADOWED_FIELD_NAMES = new HashMap<>();
+	
 	public static void scanModClasses(Path modRoot, ModMetadataExt metadata, boolean shouldPatch)
 	{
 		final String accessWidener = metadata.id() + ".accesswidener";
@@ -41,6 +44,7 @@ public class GiftWrapModScanner
 		final Collection<AdapterLoadableClassEntry> initEntrypoints = new ArrayList<>();
 		
 		final Map<String, String> modClasses = new HashMap<>();
+		final Map<String, String> mixinClasses = new HashMap<>();
 		
 		try
 		{
@@ -68,7 +72,30 @@ public class GiftWrapModScanner
 								modClasses.put(fileName, fileName.substring(0, fileName.length() - 6).replace('/', '.'));
 							}
 							
+							if ("Lorg/spongepowered/asm/mixin/Mixin;".equals(descriptor))
+							{
+								mixinClasses.put(fileName, fileName.substring(0, fileName.length() - 6).replace('/', '.'));
+							}
+							
 							return super.visitAnnotation(descriptor, visible);
+						}
+						
+						@Override
+						public FieldVisitor visitField(int access, String name, String descriptor, String signature, Object value)
+						{
+							if (shouldPatch)
+							{
+								if (mixinClasses.containsKey(fileName))
+								{
+									if (name.length() > 3 && name.startsWith("f_") && name.endsWith("_") && SHADOWED_FIELD_NAMES.containsKey(name))
+									{
+										patched[0] = true;
+										return super.visitField(access, SHADOWED_FIELD_NAMES.get(name), descriptor, signature, value);
+									}
+								}
+							}
+							
+							return super.visitField(access, name, descriptor, signature, value);
 						}
 						
 						@Override

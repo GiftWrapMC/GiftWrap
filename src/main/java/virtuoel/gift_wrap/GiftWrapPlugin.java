@@ -328,8 +328,9 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 					}
 					
 					String dst = "intermediary";
-					String srgClass, clazz, dstName;
+					String srgClass, srgField, clazz, dstName;
 					String[] found;
+					boolean populateFields = GiftWrapModScanner.SHADOWED_FIELD_NAMES.isEmpty();
 					for (MappingTree.ClassMapping c : mappingTree().getClasses())
 					{
 						srgClass = c.getName("mojang");
@@ -365,6 +366,16 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 						
 						for (MappingTree.FieldMapping f : c.getFields())
 						{
+							srgField = f.getName("srg");
+							dstName = f.getName(dst);
+							if (populateFields)
+							{
+								if (dstName != null && srgField.length() > 3 && srgField.startsWith("f_") && srgField.endsWith("_"))
+								{
+									GiftWrapModScanner.SHADOWED_FIELD_NAMES.put(srgField, dstName);
+								}
+							}
+							
 							found = null;
 							for (String[] field : deferredFields.keySet())
 							{
@@ -373,9 +384,9 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 									field[1] = clazz;
 								}
 								
-								if (f.getName("srg").equals(field[2]) && f.getDesc("mojang").equals(field[3]))
+								if (srgField.equals(field[2]) && f.getDesc("mojang").equals(field[3]))
 								{
-									field[2] = f.getName(dst);
+									field[2] = dstName;
 									field[3] = f.getDesc(dst);
 									found = field;
 									break;
