@@ -330,7 +330,8 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 					String dst = "intermediary";
 					String srgClass, srgMethod, srgField, clazz, dstName;
 					String[] found;
-					boolean populateShadows = GiftWrapModScanner.SHADOWED_NAMES.isEmpty();
+					boolean populateShadowedMethods = GiftWrapModScanner.SHADOWED_METHOD_NAMES.isEmpty();
+					boolean populateShadowedFields = GiftWrapModScanner.SHADOWED_FIELD_NAMES.isEmpty();
 					for (MappingTree.ClassMapping c : mappingTree().getClasses())
 					{
 						srgClass = c.getName("mojang");
@@ -340,11 +341,11 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 						{
 							srgMethod = m.getName("srg");
 							dstName = m.getName(dst);
-							if (populateShadows)
+							if (populateShadowedMethods)
 							{
 								if (dstName != null && srgMethod.length() > 3 && srgMethod.startsWith("m_") && srgMethod.endsWith("_"))
 								{
-									GiftWrapModScanner.SHADOWED_NAMES.put(srgMethod, dstName);
+									GiftWrapModScanner.SHADOWED_METHOD_NAMES.put(srgMethod, dstName);
 								}
 							}
 							
@@ -378,11 +379,11 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 						{
 							srgField = f.getName("srg");
 							dstName = f.getName(dst);
-							if (populateShadows)
+							if (populateShadowedFields)
 							{
 								if (dstName != null && srgField.length() > 3 && srgField.startsWith("f_") && srgField.endsWith("_"))
 								{
-									GiftWrapModScanner.SHADOWED_NAMES.put(srgField, dstName);
+									GiftWrapModScanner.SHADOWED_FIELD_NAMES.put(srgField, dstName);
 								}
 							}
 							
@@ -413,7 +414,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 						}
 					}
 					
-					try(OutputStream out = Files.newOutputStream(refmapPath))
+					try (OutputStream out = Files.newOutputStream(refmapPath))
 					{
 						Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 						

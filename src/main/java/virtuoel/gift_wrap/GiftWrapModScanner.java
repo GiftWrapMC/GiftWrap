@@ -29,7 +29,8 @@ import net.minecraft.util.DyeColor;
 
 public class GiftWrapModScanner
 {
-	public static final Map<String, String> SHADOWED_NAMES = new HashMap<>();
+	public static final Map<String, String> SHADOWED_FIELD_NAMES = new HashMap<>();
+	public static final Map<String, String> SHADOWED_METHOD_NAMES = new HashMap<>();
 	
 	public static void scanModClasses(Path modRoot, ModMetadataExt metadata, boolean shouldPatch)
 	{
@@ -87,10 +88,10 @@ public class GiftWrapModScanner
 							{
 								if (mixinClasses.containsKey(fileName))
 								{
-									if (name.length() > 3 && name.startsWith("f_") && name.endsWith("_") && SHADOWED_NAMES.containsKey(name))
+									if (name.length() > 3 && name.startsWith("f_") && name.endsWith("_") && SHADOWED_FIELD_NAMES.containsKey(name))
 									{
 										patched[0] = true;
-										name = SHADOWED_NAMES.get(name);
+										name = SHADOWED_FIELD_NAMES.get(name);
 									}
 								}
 							}
@@ -101,12 +102,15 @@ public class GiftWrapModScanner
 						@Override
 						public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions)
 						{
-							if (mixinClasses.containsKey(fileName))
+							if (shouldPatch)
 							{
-								if (name.length() > 3 && name.startsWith("m_") && name.endsWith("_") && SHADOWED_NAMES.containsKey(name))
+								if (mixinClasses.containsKey(fileName))
 								{
-									patched[0] = true;
-									name = SHADOWED_NAMES.get(name);
+									if (name.length() > 3 && name.startsWith("m_") && name.endsWith("_") && SHADOWED_METHOD_NAMES.containsKey(name))
+									{
+										patched[0] = true;
+										name = SHADOWED_METHOD_NAMES.get(name);
+									}
 								}
 							}
 							
