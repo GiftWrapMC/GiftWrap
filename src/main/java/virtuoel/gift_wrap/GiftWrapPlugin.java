@@ -328,9 +328,9 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 					}
 					
 					String dst = "intermediary";
-					String srgClass, srgField, clazz, dstName;
+					String srgClass, srgMethod, srgField, clazz, dstName;
 					String[] found;
-					boolean populateFields = GiftWrapModScanner.SHADOWED_FIELD_NAMES.isEmpty();
+					boolean populateShadows = GiftWrapModScanner.SHADOWED_NAMES.isEmpty();
 					for (MappingTree.ClassMapping c : mappingTree().getClasses())
 					{
 						srgClass = c.getName("mojang");
@@ -338,6 +338,16 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 						
 						for (MappingTree.MethodMapping m : c.getMethods())
 						{
+							srgMethod = m.getName("srg");
+							dstName = m.getName(dst);
+							if (populateShadows)
+							{
+								if (dstName != null && srgMethod.length() > 3 && srgMethod.startsWith("m_") && srgMethod.endsWith("_"))
+								{
+									GiftWrapModScanner.SHADOWED_NAMES.put(srgMethod, dstName);
+								}
+							}
+							
 							found = null;
 							for (String[] method : deferredMethods.keySet())
 							{
@@ -346,9 +356,9 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 									method[1] = clazz;
 								}
 								
-								if (m.getName("srg").equals(method[2]) && m.getDesc("mojang").equals(method[3]))
+								if (srgMethod.equals(method[2]) && m.getDesc("mojang").equals(method[3]))
 								{
-									if ((dstName = m.getName(dst)) != null)
+									if (dstName != null)
 									{
 										method[2] = dstName;
 										method[3] = m.getDesc(dst);
@@ -368,11 +378,11 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 						{
 							srgField = f.getName("srg");
 							dstName = f.getName(dst);
-							if (populateFields)
+							if (populateShadows)
 							{
 								if (dstName != null && srgField.length() > 3 && srgField.startsWith("f_") && srgField.endsWith("_"))
 								{
-									GiftWrapModScanner.SHADOWED_FIELD_NAMES.put(srgField, dstName);
+									GiftWrapModScanner.SHADOWED_NAMES.put(srgField, dstName);
 								}
 							}
 							
@@ -386,10 +396,13 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 								
 								if (srgField.equals(field[2]) && f.getDesc("mojang").equals(field[3]))
 								{
-									field[2] = dstName;
-									field[3] = f.getDesc(dst);
-									found = field;
-									break;
+									if (dstName != null)
+									{
+										field[2] = dstName;
+										field[3] = f.getDesc(dst);
+										found = field;
+										break;
+									}
 								}
 							}
 							
