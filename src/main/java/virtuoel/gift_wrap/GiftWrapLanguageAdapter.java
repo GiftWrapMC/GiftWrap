@@ -1,7 +1,5 @@
 package virtuoel.gift_wrap;
 
-import java.lang.reflect.InvocationTargetException;
-
 import org.quiltmc.loader.api.LanguageAdapter;
 import org.quiltmc.loader.api.LanguageAdapterException;
 import org.quiltmc.loader.api.ModContainer;
@@ -23,10 +21,6 @@ public class GiftWrapLanguageAdapter implements LanguageAdapter
 					try
 					{
 						Class.forName(value).getDeclaredConstructor().newInstance();
-					}
-					catch (ClassNotFoundException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException e)
-					{
-						throw new RuntimeException(e);
 					}
 					catch (Throwable e)
 					{
