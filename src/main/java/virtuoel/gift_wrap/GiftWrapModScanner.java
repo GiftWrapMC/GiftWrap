@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Predicate;
 
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassReader;
@@ -18,19 +19,15 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.MethodInsnNode;
 import org.quiltmc.loader.api.plugin.ModMetadataExt;
 import org.quiltmc.loader.impl.metadata.qmj.AdapterLoadableClassEntry;
-
-import net.minecraft.item.ItemGroup;
-import net.minecraft.registry.tag.BlockTags;
-import net.minecraft.registry.tag.FluidTags;
-import net.minecraft.registry.tag.ItemTags;
-import net.minecraft.util.DyeColor;
 
 public class GiftWrapModScanner
 {
 	public static final Map<String, String> SHADOWED_FIELD_NAMES = new HashMap<>();
 	public static final Map<String, String> SHADOWED_METHOD_NAMES = new HashMap<>();
+	public static final Collection<Predicate<MethodInsnNode>> METHOD_INSN_PATCHES = new ArrayList<>();
 	
 	public static void scanModClasses(Path modRoot, ModMetadataExt metadata, boolean shouldPatch)
 	{
@@ -127,34 +124,23 @@ public class GiftWrapModScanner
 								{
 									if (shouldPatch)
 									{
-										// TODO make better and only run once
-										if ("builder".equals(insnName) && ItemGroup.class.getName().equals(owner.replace('/', '.')))
+										final MethodInsnNode node = new MethodInsnNode(opcode, owner, insnName, descriptor, isInterface);
+										
+										for (final Predicate<MethodInsnNode> patch : METHOD_INSN_PATCHES)
 										{
-											owner = "virtuoel/gift_wrap/hooks/ItemGroupHooks";
-											patched[0] = true;
+											if (patch.test(node))
+											{
+												patched[0] = true;
+												break;
+											}
 										}
-										else if ("create".equals(insnName) && BlockTags.class.getName().equals(owner.replace('/', '.')))
-										{
-											owner = "virtuoel/gift_wrap/hooks/BlockTagsHooks";
-											patched[0] = true;
-										}
-										else if ("create".equals(insnName) && ItemTags.class.getName().equals(owner.replace('/', '.')))
-										{
-											owner = "virtuoel/gift_wrap/hooks/ItemTagsHooks";
-											patched[0] = true;
-										}
-										else if ("getColor".equals(insnName) && DyeColor.class.getName().equals(owner.replace('/', '.')))
-										{
-											owner = "virtuoel/gift_wrap/hooks/DyeColorHooks";
-											patched[0] = true;
-										}
-										else if ("create".equals(insnName) && FluidTags.class.getName().equals(owner.replace('/', '.')))
-										{
-											owner = "virtuoel/gift_wrap/hooks/FluidTagsHooks";
-											patched[0] = true;
-										}
+										
+										super.visitMethodInsn(node.getOpcode(), node.owner, node.name, node.desc, node.itf);
 									}
-									super.visitMethodInsn(opcode, owner, insnName, descriptor, isInterface);
+									else
+									{
+										super.visitMethodInsn(opcode, owner, insnName, descriptor, isInterface);
+									}
 								}
 							};
 						}

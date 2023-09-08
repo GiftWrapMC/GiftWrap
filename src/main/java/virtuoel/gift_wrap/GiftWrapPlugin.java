@@ -15,11 +15,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 import java.util.zip.ZipError;
 
+import org.objectweb.asm.tree.MethodInsnNode;
 import org.quiltmc.loader.api.FasterFiles;
 import org.quiltmc.loader.api.LoaderValue;
+import org.quiltmc.loader.api.QuiltLoader;
 import org.quiltmc.loader.api.gui.QuiltLoaderGui;
 import org.quiltmc.loader.api.gui.QuiltLoaderIcon;
 import org.quiltmc.loader.api.plugin.ModLocation;
@@ -53,6 +57,7 @@ import net.fabricmc.tinyremapper.InputTag;
 import net.fabricmc.tinyremapper.NonClassCopyMode;
 import net.fabricmc.tinyremapper.OutputConsumerPath;
 import net.fabricmc.tinyremapper.TinyRemapper;
+import virtuoel.gift_wrap.hooks.StaticMethodPatcher;
 
 public class GiftWrapPlugin implements QuiltLoaderPlugin
 {
@@ -582,11 +587,22 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		this.context = context;
 		
 		this.version = context().manager().getAllMods("minecraft").stream().findFirst().get().version().toString();
+		
+		QuiltLoader.getObjectShare().put("gift_wrap:method_insn_patches", (Consumer<Predicate<MethodInsnNode>>) GiftWrapModScanner.METHOD_INSN_PATCHES::add);
+		
+		// TODO move with hooks to API plugin
+		QuiltLoader.getObjectShare().whenAvailable("gift_wrap:method_insn_patches", (key, value) ->
+		{
+			@SuppressWarnings("unchecked")
+			final Consumer<Predicate<MethodInsnNode>> patches = (Consumer<Predicate<MethodInsnNode>>) value;
+			patches.accept(StaticMethodPatcher::patch);
+		});
 	}
 	
 	@Override
 	public void unload(Map<String, LoaderValue> data)
 	{
-		
+		QuiltLoader.getObjectShare().remove("gift_wrap:method_insn_patches");
+		GiftWrapModScanner.METHOD_INSN_PATCHES.clear();
 	}
 }
