@@ -97,7 +97,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		
 		Path cache = manager.getCacheDirectory();
 		
-		Path remappedMinecraft = cache.resolve("forge/remapped/minecraft");
+		Path remappedMinecraft = cache.resolve(MOD_ID + "/remapped/minecraft");
 		if (Files.notExists(remappedMinecraft))
 		{
 			Path minecraftRoot = manager.getAllMods("minecraft").stream().findFirst().get().resourceRoot();
@@ -125,7 +125,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 			outputConsumer.close();
 		}
 		
-		Path remappedPath = cache.resolve("forge/remapped/" + meta.id());
+		Path remappedPath = cache.resolve(MOD_ID + "/remapped/" + meta.id());
 		boolean firstScan = Files.notExists(remappedPath);
 		if (firstScan)
 		{
@@ -538,7 +538,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		}
 		
 		Path cache = context().manager().getCacheDirectory();
-		Path tsrg = cache.resolve("forge/" + version + "/joined.tsrg");
+		Path tsrg = cache.resolve(MOD_ID + "/" + version + "/joined.tsrg");
 		
 		if (Files.notExists(tsrg))
 		{
@@ -549,7 +549,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 			LOGGER.info("Done");
 		}
 		
-		Path clientMappings = cache.resolve("forge/" + version + "/client.txt");
+		Path clientMappings = cache.resolve(MOD_ID + "/" + version + "/client.txt");
 		
 		if (Files.notExists(clientMappings))
 		{
@@ -560,7 +560,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 			LOGGER.info("Done");
 		}
 		
-		Path serverMappings = cache.resolve("forge/" + version + "/server.txt");
+		Path serverMappings = cache.resolve(MOD_ID + "/" + version + "/server.txt");
 		
 		if (Files.notExists(serverMappings))
 		{
