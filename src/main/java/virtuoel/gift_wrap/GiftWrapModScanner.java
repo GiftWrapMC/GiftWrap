@@ -120,10 +120,37 @@ public class GiftWrapModScanner
 								}
 								
 								@Override
+								public void visitFieldInsn(int opcode, String owner, String insnName, String descriptor)
+								{
+									if (shouldPatch)
+									{
+										if (mixinClasses.containsKey(fileName))
+										{
+											if (insnName.length() > 3 && insnName.startsWith("f_") && insnName.endsWith("_") && SHADOWED_FIELD_NAMES.containsKey(insnName))
+											{
+												patched[0] = true;
+												insnName = SHADOWED_FIELD_NAMES.get(insnName);
+											}
+										}
+									}
+									
+									super.visitFieldInsn(opcode, owner, insnName, descriptor);
+								}
+								
+								@Override
 								public void visitMethodInsn(int opcode, String owner, String insnName, String descriptor, boolean isInterface)
 								{
 									if (shouldPatch)
 									{
+										if (mixinClasses.containsKey(fileName))
+										{
+											if (insnName.length() > 3 && insnName.startsWith("m_") && insnName.endsWith("_") && SHADOWED_METHOD_NAMES.containsKey(insnName))
+											{
+												patched[0] = true;
+												insnName = SHADOWED_METHOD_NAMES.get(insnName);
+											}
+										}
+										
 										final MethodInsnNode node = new MethodInsnNode(opcode, owner, insnName, descriptor, isInterface);
 										
 										for (final Predicate<MethodInsnNode> patch : METHOD_INSN_PATCHES)
