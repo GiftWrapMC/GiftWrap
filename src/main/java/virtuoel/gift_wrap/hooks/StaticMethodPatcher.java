@@ -1,6 +1,11 @@
 package virtuoel.gift_wrap.hooks;
 
+import java.lang.reflect.InvocationTargetException;
+import java.net.URL;
+import java.net.URLStreamHandlerFactory;
+
 import org.objectweb.asm.tree.MethodInsnNode;
+import org.quiltmc.loader.impl.filesystem.DelegatingUrlStreamHandlerFactory;
 
 import net.minecraft.item.ItemGroup;
 import net.minecraft.registry.tag.BlockTags;
@@ -10,9 +15,27 @@ import net.minecraft.util.DyeColor;
 
 public class StaticMethodPatcher
 {
+	public static void hookSetUrlStreamHandlerFactory(URLStreamHandlerFactory factory)
+	{
+		try
+		{
+			DelegatingUrlStreamHandlerFactory.class.getMethod("appendFactory", URLStreamHandlerFactory.class).invoke(null, factory);
+		}
+		catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e)
+		{
+			e.printStackTrace();
+		}
+	}
+	
 	public static boolean patch(final MethodInsnNode node)
 	{
-		if ("create".equals(node.name) && BlockTags.class.getName().equals(node.owner.replace('/', '.')))
+		if ("setURLStreamHandlerFactory".equals(node.name) && URL.class.getName().equals(node.owner.replace('/', '.')))
+		{
+			node.owner = "virtuoel/gift_wrap/hooks/StaticMethodPatcher";
+			node.name = "hookSetUrlStreamHandlerFactory";
+			return true;
+		}
+		else if ("create".equals(node.name) && BlockTags.class.getName().equals(node.owner.replace('/', '.')))
 		{
 			node.owner = "virtuoel/gift_wrap/hooks/BlockTagsHooks";
 			return true;
