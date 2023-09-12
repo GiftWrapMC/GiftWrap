@@ -112,6 +112,8 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 				.ignoreConflicts(true)
 				.build();
 			
+			LOGGER.info("Remapping vanilla...");
+			
 			remapper.getEnvironment();
 			
 			Files.createDirectories(remappedMinecraft.getParent());
@@ -123,20 +125,22 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 			remapper.apply(outputConsumer, tag);
 			remapper.finish();
 			outputConsumer.close();
+			
+			LOGGER.info("Done remapping vanilla.");
 		}
 		
 		Path remappedPath = cache.resolve(MOD_ID + "/remapped/" + meta.id());
 		boolean firstScan = Files.notExists(remappedPath);
 		if (firstScan)
 		{
-			LOGGER.info("Remapping new or changed mod \"{}\"...", meta.id());
-			
 			TinyRemapper remapper = TinyRemapper.newRemapper()
 				.withMappings(mappingProvider())
 				.renameInvalidLocals(false)
 				.ignoreFieldDesc(true)
 				.ignoreConflicts(true)
 				.build();
+			
+			LOGGER.info("Remapping new or changed mod \"{}\"...", meta.id());
 			
 			remapper.readClassPath(remappedMinecraft);
 			
@@ -537,6 +541,8 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 			return mappingTree;
 		}
 		
+		LOGGER.info("Loading mappings on first access...");
+		
 		Path cache = context().manager().getCacheDirectory();
 		Path tsrg = cache.resolve(MOD_ID + "/" + version + "/joined.tsrg");
 		
@@ -577,6 +583,8 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		ProGuardReader.read(Files.newBufferedReader(serverMappings), "mojang", "official", mappingTree);
 		TsrgReader.read(Files.newBufferedReader(tsrg), new MappingNsRenamer(mappingTree, Map.of("obf", "official")));
 		loadIntermediary(mappingTree);
+		
+		LOGGER.info("Done loading mappings.");
 		
 		return mappingTree;
 	}
