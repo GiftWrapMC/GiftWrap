@@ -15,8 +15,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.BiPredicate;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
 import java.util.stream.Stream;
 import java.util.zip.ZipError;
 
@@ -596,13 +596,13 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		
 		this.version = context().manager().getAllMods("minecraft").stream().findFirst().get().version().toString();
 		
-		QuiltLoader.getObjectShare().put("gift_wrap:method_insn_patches", (Consumer<Predicate<MethodInsnNode>>) GiftWrapModScanner.METHOD_INSN_PATCHES::add);
+		QuiltLoader.getObjectShare().put("gift_wrap:method_insn_patches", (Consumer<BiPredicate<String, MethodInsnNode>>) GiftWrapModScanner.METHOD_INSN_PATCHES::add);
 		
 		// TODO move with hooks to API plugin
 		QuiltLoader.getObjectShare().whenAvailable("gift_wrap:method_insn_patches", (key, value) ->
 		{
 			@SuppressWarnings("unchecked")
-			final Consumer<Predicate<MethodInsnNode>> patches = (Consumer<Predicate<MethodInsnNode>>) value;
+			final Consumer<BiPredicate<String, MethodInsnNode>> patches = (Consumer<BiPredicate<String, MethodInsnNode>>) value;
 			patches.accept(StaticMethodPatcher::patch);
 		});
 	}

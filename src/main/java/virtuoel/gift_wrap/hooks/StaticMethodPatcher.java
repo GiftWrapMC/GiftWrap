@@ -27,7 +27,7 @@ public class StaticMethodPatcher
 		}
 	}
 	
-	public static boolean patch(final MethodInsnNode node)
+	public static boolean patch(final String className, final MethodInsnNode node)
 	{
 		if ("setURLStreamHandlerFactory".equals(node.name) && URL.class.getName().equals(node.owner.replace('/', '.')))
 		{

@@ -9,8 +9,10 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
-import java.util.function.Predicate;
+import java.util.Set;
+import java.util.function.BiPredicate;
 
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassReader;
@@ -27,7 +29,7 @@ public class GiftWrapModScanner
 {
 	public static final Map<String, String> SHADOWED_FIELD_NAMES = new HashMap<>();
 	public static final Map<String, String> SHADOWED_METHOD_NAMES = new HashMap<>();
-	public static final Collection<Predicate<MethodInsnNode>> METHOD_INSN_PATCHES = new ArrayList<>();
+	public static final Collection<BiPredicate<String, MethodInsnNode>> METHOD_INSN_PATCHES = new ArrayList<>();
 	
 	public static void scanModClasses(Path modRoot, ModMetadataExt metadata, boolean shouldPatch)
 	{
@@ -41,8 +43,8 @@ public class GiftWrapModScanner
 		final Map<String, Collection<AdapterLoadableClassEntry>> entrypoints = metadata.getEntrypoints();
 		final Collection<AdapterLoadableClassEntry> initEntrypoints = new ArrayList<>();
 		
-		final Map<String, String> modClasses = new HashMap<>();
-		final Map<String, String> mixinClasses = new HashMap<>();
+		final Set<String> modClasses = new LinkedHashSet<>();
+		final Set<String> mixinClasses = new LinkedHashSet<>();
 		
 		try
 		{
@@ -54,6 +56,8 @@ public class GiftWrapModScanner
 				{
 					return;
 				}
+				
+				final String className = fileName.substring(0, fileName.length() - 6).replace('/', '.');
 				
 				byte[] patchedBytes = null;
 				try (final InputStream in = Files.newInputStream(p))
@@ -67,12 +71,12 @@ public class GiftWrapModScanner
 						{
 							if ("Lnet/minecraftforge/fml/common/Mod;".equals(descriptor))
 							{
-								modClasses.put(fileName, fileName.substring(0, fileName.length() - 6).replace('/', '.'));
+								modClasses.add(className);
 							}
 							
 							if ("Lorg/spongepowered/asm/mixin/Mixin;".equals(descriptor))
 							{
-								mixinClasses.put(fileName, fileName.substring(0, fileName.length() - 6).replace('/', '.'));
+								mixinClasses.add(className);
 							}
 							
 							return super.visitAnnotation(descriptor, visible);
@@ -83,7 +87,7 @@ public class GiftWrapModScanner
 						{
 							if (shouldPatch)
 							{
-								if (mixinClasses.containsKey(fileName))
+								if (mixinClasses.contains(className))
 								{
 									if (name.length() > 3 && name.startsWith("f_") && name.endsWith("_") && SHADOWED_FIELD_NAMES.containsKey(name))
 									{
@@ -101,7 +105,7 @@ public class GiftWrapModScanner
 						{
 							if (shouldPatch)
 							{
-								if (mixinClasses.containsKey(fileName))
+								if (mixinClasses.contains(className))
 								{
 									if (name.length() > 3 && name.startsWith("m_") && name.endsWith("_") && SHADOWED_METHOD_NAMES.containsKey(name))
 									{
@@ -124,7 +128,7 @@ public class GiftWrapModScanner
 								{
 									if (shouldPatch)
 									{
-										if (mixinClasses.containsKey(fileName))
+										if (mixinClasses.contains(className))
 										{
 											if (insnName.length() > 3 && insnName.startsWith("f_") && insnName.endsWith("_") && SHADOWED_FIELD_NAMES.containsKey(insnName))
 											{
@@ -142,7 +146,7 @@ public class GiftWrapModScanner
 								{
 									if (shouldPatch)
 									{
-										if (mixinClasses.containsKey(fileName))
+										if (mixinClasses.contains(className))
 										{
 											if (insnName.length() > 3 && insnName.startsWith("m_") && insnName.endsWith("_") && SHADOWED_METHOD_NAMES.containsKey(insnName))
 											{
@@ -153,9 +157,9 @@ public class GiftWrapModScanner
 										
 										final MethodInsnNode node = new MethodInsnNode(opcode, owner, insnName, descriptor, isInterface);
 										
-										for (final Predicate<MethodInsnNode> patch : METHOD_INSN_PATCHES)
+										for (final BiPredicate<String, MethodInsnNode> patch : METHOD_INSN_PATCHES)
 										{
-											if (patch.test(node))
+											if (patch.test(className, node))
 											{
 												patched[0] = true;
 												break;
@@ -204,7 +208,7 @@ public class GiftWrapModScanner
 			e.printStackTrace();
 		}
 		
-		for (final String modClass : modClasses.values())
+		for (final String modClass : modClasses)
 		{
 			try
 			{
