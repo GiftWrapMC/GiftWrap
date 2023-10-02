@@ -98,9 +98,30 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		Path cache = manager.getCacheDirectory();
 		
 		Path remappedMinecraft = cache.resolve(MOD_ID + "/remapped/minecraft");
+		remapVanillaIfNeeded(remappedMinecraft);
+		
+		Path remappedPath = cache.resolve(MOD_ID + "/remapped/" + meta.id());
+		boolean wasRemapped = remapModIfNeeded(meta, resourceRoot, remappedMinecraft, remappedPath);
+		
+		GiftWrapModScanner.scanModClasses(remappedPath, meta, wasRemapped);
+		
+		Files.copy(resourceRoot = remappedPath, this.memoryFileSystem.resolve(meta.id()));
+		
+		ModLoadOption[] options = new ModLoadOption[metadata.size()];
+		
+		for (int i = 0; i < options.length; i++)
+		{
+			options[i] = new GiftWrapModOption(context(), metadata.get(i), fromPath, fileIcon, resourceRoot, mandatory, requiresRemap);
+		}
+		
+		return options;
+	}
+	
+	public boolean remapVanillaIfNeeded(final Path remappedMinecraft) throws IOException
+	{
 		if (Files.notExists(remappedMinecraft))
 		{
-			Path minecraftRoot = manager.getAllMods("minecraft").stream().findFirst().get().resourceRoot();
+			Path minecraftRoot = context().manager().getAllMods("minecraft").stream().findFirst().get().resourceRoot();
 			
 			boolean development = Boolean.parseBoolean(System.getProperty(SystemProperties.DEVELOPMENT, "false"));
 			String src = development ? "named" : "intermediary";
@@ -127,11 +148,16 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 			outputConsumer.close();
 			
 			LOGGER.info("Done remapping vanilla.");
+			
+			return true;
 		}
 		
-		Path remappedPath = cache.resolve(MOD_ID + "/remapped/" + meta.id());
-		boolean firstScan = Files.notExists(remappedPath);
-		if (firstScan)
+		return false;
+	}
+	
+	public boolean remapModIfNeeded(final ModMetadataExt meta, final Path resourceRoot, final Path remappedMinecraft, final Path remappedPath) throws IOException
+	{
+		if (Files.notExists(remappedPath))
 		{
 			TinyRemapper remapper = TinyRemapper.newRemapper()
 				.withMappings(mappingProvider())
@@ -302,6 +328,8 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 			{
 				try
 				{
+					LOGGER.info("Remapping mixin refmap of mod \"{}\"...", meta.id());
+					
 					Path refmapPath = remappedPath.resolve(JsonParser.parseString(Files.readString(path)).getAsJsonObject().get("refmap").getAsString());
 					JsonObject refmap = JsonParser.parseString(Files.readString(refmapPath)).getAsJsonObject();
 					
@@ -437,20 +465,11 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 			});
 			
 			LOGGER.info("Done remapping mod \"{}\".", meta.id());
+			
+			return true;
 		}
 		
-		GiftWrapModScanner.scanModClasses(remappedPath, meta, firstScan);
-		
-		Files.copy(resourceRoot = remappedPath, this.memoryFileSystem.resolve(meta.id()));
-		
-		ModLoadOption[] options = new ModLoadOption[metadata.size()];
-		
-		for (int i = 0; i < options.length; i++)
-		{
-			options[i] = new GiftWrapModOption(context(), metadata.get(i), fromPath, fileIcon, resourceRoot, mandatory, requiresRemap);
-		}
-		
-		return options;
+		return false;
 	}
 	
 	public void loadIntermediary(final MappingVisitor visitor)
