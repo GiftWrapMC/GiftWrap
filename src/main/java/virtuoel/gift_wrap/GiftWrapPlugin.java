@@ -70,6 +70,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 	private QuiltPluginContext context;
 	private MemoryMappingTree mappingTree;
 	private IMappingProvider mappingProvider;
+	private Path memoryFileSystem;
 	
 	@Override
 	public ModLoadOption[] scanZip(Path root, ModLocation location, PluginGuiTreeNode guiNode) throws IOException
@@ -93,7 +94,6 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		ModMetadataExt meta = metadata.get(0);
 		
 		Path resourceRoot = root;
-		Path memoryFs = manager.createMemoryFileSystem(meta.group() + ":" + meta.id());
 		
 		Path cache = manager.getCacheDirectory();
 		
@@ -441,7 +441,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		
 		GiftWrapModScanner.scanModClasses(remappedPath, meta, firstScan);
 		
-		Files.copy(resourceRoot = remappedPath, memoryFs.resolve(meta.id()));
+		Files.copy(resourceRoot = remappedPath, this.memoryFileSystem.resolve(meta.id()));
 		
 		ModLoadOption[] options = new ModLoadOption[metadata.size()];
 		
@@ -555,7 +555,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 			LOGGER.info("Done");
 		}
 		
-		Path clientMappings = cache.resolve(MOD_ID + "/" + version + "/client.txt");
+		Path clientMappings = this.memoryFileSystem.resolve(MOD_ID + "/" + version + "/client.txt");
 		
 		if (Files.notExists(clientMappings))
 		{
@@ -566,7 +566,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 			LOGGER.info("Done");
 		}
 		
-		Path serverMappings = cache.resolve(MOD_ID + "/" + version + "/server.txt");
+		Path serverMappings = this.memoryFileSystem.resolve(MOD_ID + "/" + version + "/server.txt");
 		
 		if (Files.notExists(serverMappings))
 		{
@@ -595,6 +595,8 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		this.context = context;
 		
 		this.version = context().manager().getAllMods("minecraft").stream().findFirst().get().version().toString();
+		
+		this.memoryFileSystem = context.manager().createMemoryFileSystem(MOD_ID);
 		
 		QuiltLoader.getObjectShare().put("gift_wrap:method_insn_patches", (Consumer<BiPredicate<String, MethodInsnNode>>) GiftWrapModScanner.METHOD_INSN_PATCHES::add);
 		
