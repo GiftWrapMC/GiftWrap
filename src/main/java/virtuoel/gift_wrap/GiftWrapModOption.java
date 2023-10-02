@@ -1,11 +1,7 @@
 package virtuoel.gift_wrap;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 
 import org.jetbrains.annotations.Nullable;
 import org.quiltmc.loader.api.gui.QuiltLoaderGui;
@@ -15,6 +11,7 @@ import org.quiltmc.loader.api.plugin.ModContainerExt;
 import org.quiltmc.loader.api.plugin.ModMetadataExt;
 import org.quiltmc.loader.api.plugin.QuiltPluginContext;
 import org.quiltmc.loader.api.plugin.solver.ModLoadOption;
+import org.quiltmc.loader.api.plugin.solver.QuiltFileHasher;
 
 public class GiftWrapModOption extends ModLoadOption
 {
@@ -115,39 +112,19 @@ public class GiftWrapModOption extends ModLoadOption
 	}
 	
 	@Override
-	public boolean needsChasmTransforming()
+	public boolean needsTransforming()
 	{
 		return true;
 	}
 	
 	@Override
-	public byte[] computeOriginHash() throws IOException
+	public byte[] computeOriginHash(QuiltFileHasher hasher) throws IOException
 	{
 		if (hash == null)
 		{
-			try
-			{
-				MessageDigest digest = MessageDigest.getInstance("SHA-1");
-				
-				final byte[] readCache = new byte[0x2000];
-				
-				try (InputStream is = Files.newInputStream(from()))
-				{
-					int count;
-					while ((count = is.read(readCache)) > 0)
-					{
-						digest.update(readCache, 0, count);
-					}
-					
-					hash = digest.digest();
-				}
-				
-			}
-			catch (NoSuchAlgorithmException e)
-			{
-				throw new IOException(e);
-			}
+			hash = hasher.computeRecursiveHash(from());
 		}
+		
 		return hash;
 	}
 	
