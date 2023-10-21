@@ -57,7 +57,6 @@ import net.fabricmc.tinyremapper.InputTag;
 import net.fabricmc.tinyremapper.NonClassCopyMode;
 import net.fabricmc.tinyremapper.OutputConsumerPath;
 import net.fabricmc.tinyremapper.TinyRemapper;
-import virtuoel.gift_wrap.hooks.StaticMethodPatcher;
 
 public class GiftWrapPlugin implements QuiltLoaderPlugin
 {
@@ -618,14 +617,6 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		this.memoryFileSystem = context.manager().createMemoryFileSystem(MOD_ID);
 		
 		QuiltLoader.getObjectShare().put("gift_wrap:method_insn_patches", (Consumer<BiPredicate<String, MethodInsnNode>>) GiftWrapModScanner.METHOD_INSN_PATCHES::add);
-		
-		// TODO move with hooks to API plugin
-		QuiltLoader.getObjectShare().whenAvailable("gift_wrap:method_insn_patches", (key, value) ->
-		{
-			@SuppressWarnings("unchecked")
-			final Consumer<BiPredicate<String, MethodInsnNode>> patches = (Consumer<BiPredicate<String, MethodInsnNode>>) value;
-			patches.accept(StaticMethodPatcher::patch);
-		});
 	}
 	
 	@Override
