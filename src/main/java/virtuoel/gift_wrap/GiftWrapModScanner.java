@@ -3,7 +3,6 @@ package virtuoel.gift_wrap;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -23,7 +22,7 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.quiltmc.loader.api.plugin.ModMetadataExt;
-import org.quiltmc.loader.impl.metadata.qmj.AdapterLoadableClassEntry;
+import org.quiltmc.loader.api.plugin.ModMetadataExt.ModEntrypoint;
 
 public class GiftWrapModScanner
 {
@@ -40,8 +39,8 @@ public class GiftWrapModScanner
 			metadata.accessWideners().add(accessWidener);
 		}
 		
-		final Map<String, Collection<AdapterLoadableClassEntry>> entrypoints = metadata.getEntrypoints();
-		final Collection<AdapterLoadableClassEntry> initEntrypoints = new ArrayList<>();
+		final Map<String, Collection<ModEntrypoint>> entrypoints = metadata.getEntrypoints();
+		final Collection<ModEntrypoint> initEntrypoints = new ArrayList<>();
 		
 		final Set<String> modClasses = new LinkedHashSet<>();
 		final Set<String> mixinClasses = new LinkedHashSet<>();
@@ -69,7 +68,7 @@ public class GiftWrapModScanner
 						@Override
 						public AnnotationVisitor visitAnnotation(final String descriptor, final boolean visible)
 						{
-							if ("Lnet/minecraftforge/fml/common/Mod;".equals(descriptor))
+							if ("Lnet/neoforged/fml/common/Mod;".equals(descriptor))
 							{
 								modClasses.add(className);
 							}
@@ -210,14 +209,7 @@ public class GiftWrapModScanner
 		
 		for (final String modClass : modClasses)
 		{
-			try
-			{
-				initEntrypoints.add(AdapterLoadableClassEntry.class.getConstructor(String.class, String.class).newInstance("gift_wrap", modClass));
-			}
-			catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException e)
-			{
-				e.printStackTrace();
-			}
+			initEntrypoints.add(ModEntrypoint.create("gift_wrap", modClass));
 		}
 		
 		entrypoints.put("init", initEntrypoints);

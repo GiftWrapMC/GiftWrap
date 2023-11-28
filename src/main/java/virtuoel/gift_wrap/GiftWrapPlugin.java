@@ -46,10 +46,8 @@ import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 
 import net.fabricmc.mappingio.MappingVisitor;
-import net.fabricmc.mappingio.adapter.MappingNsRenamer;
-import net.fabricmc.mappingio.format.ProGuardReader;
-import net.fabricmc.mappingio.format.Tiny2Reader;
-import net.fabricmc.mappingio.format.TsrgReader;
+import net.fabricmc.mappingio.format.proguard.ProGuardFileReader;
+import net.fabricmc.mappingio.format.tiny.Tiny2FileReader;
 import net.fabricmc.mappingio.tree.MappingTree;
 import net.fabricmc.mappingio.tree.MemoryMappingTree;
 import net.fabricmc.tinyremapper.IMappingProvider;
@@ -126,7 +124,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 			String src = development ? "named" : "intermediary";
 			
 			TinyRemapper remapper = TinyRemapper.newRemapper()
-				.withMappings(createMappingProvider(mappingTree(), src, "mojang", src, "srg"))
+				.withMappings(createMappingProvider(mappingTree(), src, "mojang"))
 				.renameInvalidLocals(false)
 				.ignoreFieldDesc(true)
 				.ignoreConflicts(true)
@@ -235,14 +233,14 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 						text.append(dst);
 						
 						Boolean unfinal;
-						String srgClass, clazz, name, desc;
+						String srcClass, clazz, name, desc;
 						Map<String, Boolean> entries;
 						for (MappingTree.ClassMapping c : mappingTree().getClasses())
 						{
-							srgClass = c.getName("mojang");
+							srcClass = c.getName("mojang");
 							clazz = c.getName(dst);
 							
-							unfinal = deferredClasses.get(srgClass);
+							unfinal = deferredClasses.get(srcClass);
 							if (unfinal != null)
 							{
 								text.append('\n');
@@ -251,12 +249,12 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 								text.append(clazz);
 							}
 							
-							entries = deferredMethods.get(srgClass);
+							entries = deferredMethods.get(srcClass);
 							if (entries != null)
 							{
 								for (MappingTree.MethodMapping m : c.getMethods())
 								{
-									unfinal = entries.get(m.getName("srg"));
+									unfinal = entries.get(m.getName("mojang"));
 									if (unfinal != null)
 									{
 										text.append('\n');
@@ -282,12 +280,12 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 								}
 							}
 							
-							entries = deferredFields.get(srgClass);
+							entries = deferredFields.get(srcClass);
 							if (entries != null)
 							{
 								for (MappingTree.FieldMapping f : c.getFields())
 								{
-									unfinal = entries.get(f.getName("srg"));
+									unfinal = entries.get(f.getName("mojang"));
 									if (unfinal != null)
 									{
 										text.append('\n');
@@ -323,145 +321,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 				}
 			}
 			
-			meta.mixins(null).stream().findFirst().map(remappedPath::resolve).ifPresent(path ->
-			{
-				try
-				{
-					LOGGER.info("Remapping mixin refmap of mod \"{}\"...", meta.id());
-					
-					Path refmapPath = remappedPath.resolve(JsonParser.parseString(Files.readString(path)).getAsJsonObject().get("refmap").getAsString());
-					JsonObject refmap = JsonParser.parseString(Files.readString(refmapPath)).getAsJsonObject();
-					
-					JsonObject mappedData = new JsonObject();
-					JsonObject data = refmap.get("data").getAsJsonObject();
-					JsonObject srgData = data.get("searge").getAsJsonObject();
-					data.add("named:intermediary", mappedData);
-					refmap.add("mappings", mappedData);
-					
-					Map<String[], JsonObject> deferredMethods = new HashMap<>();
-					Map<String[], JsonObject> deferredFields = new HashMap<>();
-					String toRemap;
-					JsonObject mapped, mappings;
-					for (String mixinClass : srgData.keySet())
-					{
-						mapped = new JsonObject();
-						mappings = srgData.get(mixinClass).getAsJsonObject();
-						for (final Entry<String, JsonElement> entry : mappings.entrySet())
-						{
-							toRemap = entry.getValue().getAsString();
-							
-							boolean isField = toRemap.contains(":");
-							int nameIndex = toRemap.startsWith("L") ? toRemap.indexOf(';') + 1 : 0;
-							int descIndex = toRemap.indexOf(isField ? ':' : '(');
-							
-							String clazz = nameIndex == 0 ? null : toRemap.substring(1, nameIndex - 1);
-							String name = toRemap.substring(nameIndex, descIndex);
-							String desc = toRemap.substring(descIndex + (isField ? 1 : 0));
-							
-							(isField ? deferredFields : deferredMethods).put(new String[] { entry.getKey(), clazz, name, desc }, mapped);
-						}
-						mappedData.add(mixinClass, mapped);
-					}
-					
-					String dst = "intermediary";
-					String srgClass, srgMethod, srgField, clazz, dstName;
-					String[] found;
-					boolean populateShadowedMethods = GiftWrapModScanner.SHADOWED_METHOD_NAMES.isEmpty();
-					boolean populateShadowedFields = GiftWrapModScanner.SHADOWED_FIELD_NAMES.isEmpty();
-					for (MappingTree.ClassMapping c : mappingTree().getClasses())
-					{
-						srgClass = c.getName("mojang");
-						clazz = c.getName(dst);
-						
-						for (MappingTree.MethodMapping m : c.getMethods())
-						{
-							srgMethod = m.getName("srg");
-							dstName = m.getName(dst);
-							if (populateShadowedMethods)
-							{
-								if (dstName != null && srgMethod.length() > 3 && srgMethod.startsWith("m_") && srgMethod.endsWith("_"))
-								{
-									GiftWrapModScanner.SHADOWED_METHOD_NAMES.put(srgMethod, dstName);
-								}
-							}
-							
-							found = null;
-							for (String[] method : deferredMethods.keySet())
-							{
-								if (method[1] != null && method[1].equals(srgClass))
-								{
-									method[1] = clazz;
-								}
-								
-								if (srgMethod.equals(method[2]) && m.getDesc("mojang").equals(method[3]))
-								{
-									if (dstName != null)
-									{
-										method[2] = dstName;
-										method[3] = m.getDesc(dst);
-										found = method;
-										break;
-									}
-								}
-							}
-							
-							if (found != null)
-							{
-								deferredMethods.remove(found).addProperty(found[0], (found[1] == null ? "" : ("L" + found[1] + ";")) + found[2] + found[3]);
-							}
-						}
-						
-						for (MappingTree.FieldMapping f : c.getFields())
-						{
-							srgField = f.getName("srg");
-							dstName = f.getName(dst);
-							if (populateShadowedFields)
-							{
-								if (dstName != null && srgField.length() > 3 && srgField.startsWith("f_") && srgField.endsWith("_"))
-								{
-									GiftWrapModScanner.SHADOWED_FIELD_NAMES.put(srgField, dstName);
-								}
-							}
-							
-							found = null;
-							for (String[] field : deferredFields.keySet())
-							{
-								if (field[1] != null && field[1].equals(srgClass))
-								{
-									field[1] = clazz;
-								}
-								
-								if (srgField.equals(field[2]) && f.getDesc("mojang").equals(field[3]))
-								{
-									if (dstName != null)
-									{
-										field[2] = dstName;
-										field[3] = f.getDesc(dst);
-										found = field;
-										break;
-									}
-								}
-							}
-							
-							if (found != null)
-							{
-								deferredFields.remove(found).addProperty(found[0], (found[1] == null ? "" : ("L" + found[1] + ";")) + found[2] + ":" + found[3]);
-							}
-						}
-					}
-					
-					try (OutputStream out = Files.newOutputStream(refmapPath))
-					{
-						Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
-						
-						out.write(gson.toJson(refmap).getBytes(StandardCharsets.UTF_8));
-					}
-				}
-				catch (JsonSyntaxException | IOException e)
-				{
-					e.printStackTrace();
-				}
-			});
+			generateRefmap(meta, remappedPath);
 			
 			LOGGER.info("Done remapping mod \"{}\".", meta.id());
 			
@@ -469,6 +329,156 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		}
 		
 		return false;
+	}
+	
+	public void generateRefmap(final ModMetadataExt meta, final Path remappedPath)
+	{
+		if (meta.mixins(null) == meta.mixins(null))
+		{
+			return;
+		}
+		
+		// TODO convert from refmap remapping to refmap generation
+		
+		meta.mixins(null).stream().findFirst().map(remappedPath::resolve).ifPresent(path ->
+		{
+			try
+			{
+				LOGGER.info("Remapping mixin refmap of mod \"{}\"...", meta.id());
+				
+				Path refmapPath = remappedPath.resolve(JsonParser.parseString(Files.readString(path)).getAsJsonObject().get("refmap").getAsString());
+				JsonObject refmap = JsonParser.parseString(Files.readString(refmapPath)).getAsJsonObject();
+				
+				JsonObject mappedData = new JsonObject();
+				JsonObject data = refmap.get("data").getAsJsonObject();
+				JsonObject srgData = data.get("searge").getAsJsonObject();
+				data.add("named:intermediary", mappedData);
+				refmap.add("mappings", mappedData);
+				
+				Map<String[], JsonObject> deferredMethods = new HashMap<>();
+				Map<String[], JsonObject> deferredFields = new HashMap<>();
+				String toRemap;
+				JsonObject mapped, mappings;
+				for (String mixinClass : srgData.keySet())
+				{
+					mapped = new JsonObject();
+					mappings = srgData.get(mixinClass).getAsJsonObject();
+					for (final Entry<String, JsonElement> entry : mappings.entrySet())
+					{
+						toRemap = entry.getValue().getAsString();
+						
+						boolean isField = toRemap.contains(":");
+						int nameIndex = toRemap.startsWith("L") ? toRemap.indexOf(';') + 1 : 0;
+						int descIndex = toRemap.indexOf(isField ? ':' : '(');
+						
+						String clazz = nameIndex == 0 ? null : toRemap.substring(1, nameIndex - 1);
+						String name = toRemap.substring(nameIndex, descIndex);
+						String desc = toRemap.substring(descIndex + (isField ? 1 : 0));
+						
+						(isField ? deferredFields : deferredMethods).put(new String[] { entry.getKey(), clazz, name, desc }, mapped);
+					}
+					mappedData.add(mixinClass, mapped);
+				}
+				
+				String dst = "intermediary";
+				String srgClass, srgMethod, srgField, clazz, dstName;
+				String[] found;
+				boolean populateShadowedMethods = GiftWrapModScanner.SHADOWED_METHOD_NAMES.isEmpty();
+				boolean populateShadowedFields = GiftWrapModScanner.SHADOWED_FIELD_NAMES.isEmpty();
+				for (MappingTree.ClassMapping c : mappingTree().getClasses())
+				{
+					srgClass = c.getName("mojang");
+					clazz = c.getName(dst);
+					
+					for (MappingTree.MethodMapping m : c.getMethods())
+					{
+						srgMethod = m.getName("srg");
+						dstName = m.getName(dst);
+						if (populateShadowedMethods)
+						{
+							if (dstName != null && srgMethod.length() > 3 && srgMethod.startsWith("m_") && srgMethod.endsWith("_"))
+							{
+								GiftWrapModScanner.SHADOWED_METHOD_NAMES.put(srgMethod, dstName);
+							}
+						}
+						
+						found = null;
+						for (String[] method : deferredMethods.keySet())
+						{
+							if (method[1] != null && method[1].equals(srgClass))
+							{
+								method[1] = clazz;
+							}
+							
+							if (srgMethod.equals(method[2]) && m.getDesc("mojang").equals(method[3]))
+							{
+								if (dstName != null)
+								{
+									method[2] = dstName;
+									method[3] = m.getDesc(dst);
+									found = method;
+									break;
+								}
+							}
+						}
+						
+						if (found != null)
+						{
+							deferredMethods.remove(found).addProperty(found[0], (found[1] == null ? "" : ("L" + found[1] + ";")) + found[2] + found[3]);
+						}
+					}
+					
+					for (MappingTree.FieldMapping f : c.getFields())
+					{
+						srgField = f.getName("srg");
+						dstName = f.getName(dst);
+						if (populateShadowedFields)
+						{
+							if (dstName != null && srgField.length() > 3 && srgField.startsWith("f_") && srgField.endsWith("_"))
+							{
+								GiftWrapModScanner.SHADOWED_FIELD_NAMES.put(srgField, dstName);
+							}
+						}
+						
+						found = null;
+						for (String[] field : deferredFields.keySet())
+						{
+							if (field[1] != null && field[1].equals(srgClass))
+							{
+								field[1] = clazz;
+							}
+							
+							if (srgField.equals(field[2]) && f.getDesc("mojang").equals(field[3]))
+							{
+								if (dstName != null)
+								{
+									field[2] = dstName;
+									field[3] = f.getDesc(dst);
+									found = field;
+									break;
+								}
+							}
+						}
+						
+						if (found != null)
+						{
+							deferredFields.remove(found).addProperty(found[0], (found[1] == null ? "" : ("L" + found[1] + ";")) + found[2] + ":" + found[3]);
+						}
+					}
+				}
+				
+				try (OutputStream out = Files.newOutputStream(refmapPath))
+				{
+					Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+					
+					out.write(gson.toJson(refmap).getBytes(StandardCharsets.UTF_8));
+				}
+			}
+			catch (JsonSyntaxException | IOException e)
+			{
+				e.printStackTrace();
+			}
+		});
 	}
 	
 	public void loadIntermediary(final MappingVisitor visitor)
@@ -492,7 +502,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 				
 				try (final BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream())))
 				{
-					Tiny2Reader.read(reader, visitor);
+					Tiny2FileReader.read(reader, visitor);
 				}
 			}
 			catch (IOException | ZipError e)
@@ -502,14 +512,14 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		}
 	}
 	
-	public static IMappingProvider createMappingProvider(MemoryMappingTree tree, String classSrc, String classDst, String src, String dst)
+	public static IMappingProvider createMappingProvider(MemoryMappingTree tree, String src, String dst)
 	{
 		return (acceptor) ->
 		{
 			for (MappingTree.ClassMapping classDef : tree.getClasses())
 			{
-				String className = classDef.getName(classSrc);
-				String dstName = classDef.getName(classDst);
+				String className = classDef.getName(src);
+				String dstName = classDef.getName(dst);
 				if (className == null || dstName == null) continue;
 				acceptor.acceptClass(className, dstName);
 				
@@ -519,7 +529,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 					srcName = field.getName(src);
 					dstName = field.getName(dst);
 					if (srcName == null || dstName == null) continue;
-					acceptor.acceptField(new IMappingProvider.Member(className, srcName, field.getDesc(classSrc)), dstName);
+					acceptor.acceptField(new IMappingProvider.Member(className, srcName, field.getDesc(src)), dstName);
 				}
 				
 				for (MappingTree.MethodMapping method : classDef.getMethods())
@@ -527,7 +537,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 					srcName = method.getName(src);
 					dstName = method.getName(dst);
 					if (srcName == null || dstName == null) continue;
-					acceptor.acceptMethod(new IMappingProvider.Member(className, srcName, method.getDesc(classSrc)), dstName);
+					acceptor.acceptMethod(new IMappingProvider.Member(className, srcName, method.getDesc(src)), dstName);
 				}
 			}
 		};
@@ -547,7 +557,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		
 		boolean development = Boolean.parseBoolean(System.getProperty(SystemProperties.DEVELOPMENT, "false"));
 		String dst = development ? "named" : "intermediary";
-		mappingProvider = createMappingProvider(mappingTree(), "mojang", dst, "srg", dst);
+		mappingProvider = createMappingProvider(mappingTree(), "mojang", dst);
 		
 		return mappingProvider;
 	}
@@ -562,44 +572,32 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		LOGGER.info("Loading mappings on first access...");
 		
 		Path cache = context().manager().getCacheDirectory();
-		Path tsrg = cache.resolve(MOD_ID + "/" + version + "/joined.tsrg");
-		
-		if (Files.notExists(tsrg))
-		{
-			LOGGER.info("Getting tsrg");
-			Files.createDirectories(tsrg.getParent());
-			URL url = new URL("https://raw.githubusercontent.com/neoforged/NeoForm/main/versions/release/" + version + "/joined.tsrg");
-			Files.copy(url.openStream(), tsrg);
-			LOGGER.info("Done");
-		}
-		
-		Path clientMappings = this.memoryFileSystem.resolve(MOD_ID + "/" + version + "/client.txt");
+		Path clientMappings = cache.resolve(MOD_ID + "/" + version + "/client.txt");
 		
 		if (Files.notExists(clientMappings))
 		{
 			LOGGER.info("Getting client.txt");
 			Files.createDirectories(clientMappings.getParent());
-			URL url = new URL("https://piston-data.mojang.com/v1/objects/6c48521eed01fe2e8ecdadbd5ae348415f3c47da/client.txt");
+			URL url = new URL("https://piston-data.mojang.com/v1/objects/5c292ff7d3161977041116698e295083fd5ec8f5/client.txt");
 			Files.copy(url.openStream(), clientMappings);
 			LOGGER.info("Done");
 		}
 		
-		Path serverMappings = this.memoryFileSystem.resolve(MOD_ID + "/" + version + "/server.txt");
+		Path serverMappings = cache.resolve(MOD_ID + "/" + version + "/server.txt");
 		
 		if (Files.notExists(serverMappings))
 		{
 			LOGGER.info("Getting server.txt");
 			Files.createDirectories(serverMappings.getParent());
-			URL url = new URL("https://piston-data.mojang.com/v1/objects/0b4dba049482496c507b2387a73a913230ebbd76/server.txt");
+			URL url = new URL("https://piston-data.mojang.com/v1/objects/dced504a9b5df367ddd3477adac084cea8024ba4/server.txt");
 			Files.copy(url.openStream(), serverMappings);
 			LOGGER.info("Done");
 		}
 		
 		mappingTree = new MemoryMappingTree();
 		
-		ProGuardReader.read(Files.newBufferedReader(clientMappings), "mojang", "official", mappingTree);
-		ProGuardReader.read(Files.newBufferedReader(serverMappings), "mojang", "official", mappingTree);
-		TsrgReader.read(Files.newBufferedReader(tsrg), new MappingNsRenamer(mappingTree, Map.of("obf", "official")));
+		ProGuardFileReader.read(Files.newBufferedReader(clientMappings), "mojang", "official", mappingTree);
+		ProGuardFileReader.read(Files.newBufferedReader(serverMappings), "mojang", "official", mappingTree);
 		loadIntermediary(mappingTree);
 		
 		LOGGER.info("Done loading mappings.");

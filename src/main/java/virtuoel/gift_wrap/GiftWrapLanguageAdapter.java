@@ -1,5 +1,7 @@
 package virtuoel.gift_wrap;
 
+import java.lang.reflect.Constructor;
+
 import org.quiltmc.loader.api.LanguageAdapter;
 import org.quiltmc.loader.api.LanguageAdapterException;
 import org.quiltmc.loader.api.ModContainer;
@@ -20,7 +22,11 @@ public class GiftWrapLanguageAdapter implements LanguageAdapter
 				{
 					try
 					{
-						Class.forName(value).getDeclaredConstructor().newInstance();
+						final Constructor<?> constructor = Class.forName(value).getDeclaredConstructors()[0];
+						final Class<?>[] parameterTypes = constructor.getParameterTypes();
+						final Object[] parameters = new Object[parameterTypes.length];
+						
+						constructor.newInstance(parameters);
 					}
 					catch (Throwable e)
 					{

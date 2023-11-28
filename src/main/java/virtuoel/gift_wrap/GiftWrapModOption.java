@@ -91,7 +91,7 @@ public class GiftWrapModOption extends ModLoadOption
 	
 	protected String nameOfType()
 	{
-		return "forge";
+		return "neoforge";
 	}
 	
 	@Override
@@ -108,7 +108,7 @@ public class GiftWrapModOption extends ModLoadOption
 	@Override
 	public @Nullable String namespaceMappingFrom()
 	{
-		return this.requiresRemap ? "srg" : null;
+		return this.requiresRemap ? "mojang" : null;
 	}
 	
 	@Override

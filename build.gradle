@@ -13,7 +13,7 @@ repositories {
 	mavenLocal()
 	maven {
 		name = "Quilt"
-		url = "https://maven.quiltmc.org/repository/release/"
+		url = "https://maven.quiltmc.org/repository/snapshot/"
 	}
 	maven {
 		name = "Fabric"
@@ -77,7 +77,7 @@ loom {
 }
 
 if(project.hasProperty("loader_version")) {
-	if(!project.hasProperty("quilt_version")) {
+	if(!project.hasProperty("quilt_version") && !project.hasProperty("qsl_version")) {
 		ext.fabric_loader_version = project.loader_version
 	}
 	else {
@@ -111,7 +111,7 @@ dependencies {
 		}
 	}
 	
-	shadowImplementation "net.fabricmc:mapping-io:0.4.2"
+	shadowImplementation "net.fabricmc:mapping-io:0.5.0"
 	shadowImplementation "com.electronwill.night-config:core:3.6.6"
 	shadowImplementation "com.electronwill.night-config:toml:3.6.6"
 	
@@ -168,8 +168,13 @@ dependencies {
 		else if(project.hasProperty("quilt_loader_version")) {
 			modImplementation "org.quiltmc:quilt-loader:${quilt_loader_version}"
 			
-			modImplementation "org.quiltmc.quilted-fabric-api:quilted-fabric-api:${quilted_fabric_api_version}"
-			modImplementation "org.quiltmc.quilted-fabric-api:quilted-fabric-api-deprecated:${quilted_fabric_api_version}"
+			if(project.hasProperty("quilted_fabric_api_version")) {
+				modImplementation "org.quiltmc.quilted-fabric-api:quilted-fabric-api:${quilted_fabric_api_version}"
+				modImplementation "org.quiltmc.quilted-fabric-api:quilted-fabric-api-deprecated:${quilted_fabric_api_version}"
+			}
+			else if(project.hasProperty("qsl_version")) {
+				modImplementation "org.quiltmc:qsl:${qsl_version}"
+			}
 		}
 		
 		if(project.hasProperty("modmenu_version")) {
@@ -294,6 +299,10 @@ if(project.hasProperty("quilted_fabric_api_version")) {
 	ext.changelog_quilted_fabric_api_version = project.quilted_fabric_api_version
 }
 
+if(project.hasProperty("qsl_version")) {
+	ext.changelog_qsl_version = project.qsl_version
+}
+
 String generateHTMLChangelog() {
 	String changelog_text = ""
 	
@@ -332,6 +341,10 @@ String generateHTMLChangelog() {
 	
 	if(project.hasProperty("changelog_quilted_fabric_api_version")) {
 		changelog_text += "<p><a href=\"https://www.curseforge.com/minecraft/mc-mods/qsl/files/all\" rel=\"nofollow\">Quilted Fabric API <code>${changelog_quilted_fabric_api_version}</code></a></p>\n"
+	}
+	
+	if(project.hasProperty("changelog_qsl_version")) {
+		changelog_text += "<p><a href=\"https://www.curseforge.com/minecraft/mc-mods/qsl/files/all\" rel=\"nofollow\">Quilt Standard Libraries <code>${changelog_qsl_version}</code></a></p>\n"
 	}
 	
 	return changelog_text
@@ -375,6 +388,10 @@ String generateMarkdownChangelog() {
 	
 	if(project.hasProperty("changelog_quilted_fabric_api_version")) {
 		changelog_text += "[Quilted Fabric API " + '`' + "${changelog_quilted_fabric_api_version}" + '`' + "](https://modrinth.com/mod/qsl/versions)  \n"
+	}
+	
+	if(project.hasProperty("changelog_qsl_version")) {
+		changelog_text += "[Quilt Standard Libraries " + '`' + "${changelog_qsl_version}" + '`' + "](https://modrinth.com/mod/qsl/versions)  \n"
 	}
 	
 	return changelog_text

@@ -62,6 +62,6 @@ public class GiftWrapModContainer implements ModContainerExt
 	@Override
 	public String modType()
 	{
-		return "Forge";
+		return "NeoForge";
 	}
 }

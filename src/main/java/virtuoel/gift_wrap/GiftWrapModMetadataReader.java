@@ -7,8 +7,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import org.jetbrains.annotations.Nullable;
@@ -18,7 +21,7 @@ import org.quiltmc.loader.api.ModDependency;
 import org.quiltmc.loader.api.ModLicense;
 import org.quiltmc.loader.api.Version;
 import org.quiltmc.loader.api.plugin.ModMetadataExt;
-import org.quiltmc.loader.impl.metadata.qmj.AdapterLoadableClassEntry;
+import org.quiltmc.loader.api.plugin.ModMetadataExt.ModEntrypoint;
 
 import com.electronwill.nightconfig.core.CommentedConfig;
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
@@ -63,6 +66,44 @@ public class GiftWrapModMetadataReader
 			}
 		});
 		
+		final String[] manifestData = { null, null };
+		
+		try (final Stream<String> lines = Files.lines(modsToml.getParent().resolve("MANIFEST.MF")))
+		{
+			lines.forEach(line ->
+			{
+				if (line.startsWith("Implementation-Version"))
+				{
+					final int index = line.indexOf(' ');
+					if (index != -1)
+					{
+						manifestData[0] = line.substring(index + 1);
+					}
+				}
+				else if (line.startsWith("MixinConfigs"))
+				{
+					final int index = line.indexOf(' ');
+					if (index != -1)
+					{
+						manifestData[1] = line.substring(index + 1);
+					}
+				}
+			});
+		}
+		catch (IOException e)
+		{
+			e.printStackTrace();
+		}
+		
+		final Set<String> mixinConfigs = new HashSet<>();
+		Optional.<List<CommentedConfig>>ofNullable(file.get("mixins")).ifPresent(mixins ->
+		{
+			for (final CommentedConfig mixinJson : mixins)
+			{
+				mixinConfigs.add(mixinJson.get("config"));
+			}
+		});
+		
 		final String issueTrackerUrl = file.get("issueTrackerURL");
 		
 		final List<CommentedConfig> mods = file.get("mods");
@@ -82,39 +123,8 @@ public class GiftWrapModMetadataReader
 			final String authors = mod.get("authors");
 			final Collection<ModContributor> contributors = authors == null ? Collections.emptyList() : Collections.singletonList(ModContributor.of(authors, Collections.singletonList("Author")));
 			
-			String[] manifestData = { mod.get("version"), null };
-			
-			try (final Stream<String> lines = Files.lines(modsToml.getParent().resolve("MANIFEST.MF")))
-			{
-				lines.forEach(line ->
-				{
-					if (line.startsWith("Implementation-Version"))
-					{
-						if ("${file.jarVersion}".equals(manifestData[0]))
-						{
-							final int index = line.indexOf(' ');
-							if (index != -1)
-							{
-								manifestData[0] = line.substring(index + 1);
-							}
-						}
-					}
-					else if (line.startsWith("MixinConfigs"))
-					{
-						final int index = line.indexOf(' ');
-						if (index != -1)
-						{
-							manifestData[1] = line.substring(index + 1);
-						}
-					}
-				});
-			}
-			catch (IOException e)
-			{
-				e.printStackTrace();
-			}
-			
-			final Version modVersion = Version.of(manifestData[0]);
+			final String versionString = mod.get("version");
+			final Version modVersion = Version.of("${file.jarVersion}".equals(versionString) ? manifestData[0] : versionString);
 			
 			final Map<String, LoaderValue> customValues = new HashMap<>();
 			customValues.put("patchwork:patcherMeta", new TomlLoaderValue.BooleanImpl(VALUE_LOCATION, true));
@@ -122,11 +132,18 @@ public class GiftWrapModMetadataReader
 			modmenu.put("update_checker", new TomlLoaderValue.BooleanImpl(VALUE_LOCATION, false));
 			customValues.put("modmenu", new TomlLoaderValue.ObjectImpl(VALUE_LOCATION, modmenu));
 			
-			final Map<String, Collection<AdapterLoadableClassEntry>> entrypoints = new HashMap<>();
+			final Map<String, Collection<ModEntrypoint>> entrypoints = new HashMap<>();
 			
 			final Collection<String> accessWideners = new ArrayList<>();
 			
-			final Collection<String> mixins = manifestData[1] != null ? Collections.singleton(manifestData[1]) : Collections.emptySet();
+			final Collection<String> mixins = new HashSet<>();
+			mixins.addAll(mixinConfigs);
+			mixinConfigs.clear();
+			
+			if (manifestData[1] != null)
+			{
+				mixins.add(manifestData[1]);
+			}
 			
 			metadata.add(new ModMetadataExt()
 			{
@@ -193,7 +210,7 @@ public class GiftWrapModMetadataReader
 				@Override
 				public String group()
 				{
-					return "loader.forge";
+					return "loader.neoforge";
 				}
 				
 				@Override
@@ -251,7 +268,7 @@ public class GiftWrapModMetadataReader
 				}
 				
 				@Override
-				public Map<String, Collection<AdapterLoadableClassEntry>> getEntrypoints()
+				public Map<String, Collection<ModEntrypoint>> getEntrypoints()
 				{
 					return entrypoints;
 				}
