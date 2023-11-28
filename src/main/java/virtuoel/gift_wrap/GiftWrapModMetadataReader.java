@@ -39,32 +39,7 @@ public class GiftWrapModMetadataReader
 		file.load();
 		
 		final String license = file.get("license");
-		final Collection<ModLicense> licenses = Collections.singletonList(new ModLicense()
-		{
-			@Override
-			public String url()
-			{
-				return "";
-			}
-			
-			@Override
-			public String name()
-			{
-				return license;
-			}
-			
-			@Override
-			public String id()
-			{
-				return license;
-			}
-			
-			@Override
-			public String description()
-			{
-				return "";
-			}
-		});
+		final Collection<ModLicense> licenses = Collections.singletonList(ModLicense.fromIdentifierOrDefault(license));
 		
 		final String[] manifestData = { null, null };
 		
