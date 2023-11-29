@@ -46,8 +46,8 @@ import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 
 import net.fabricmc.mappingio.MappingVisitor;
-import net.fabricmc.mappingio.format.proguard.ProGuardFileReader;
-import net.fabricmc.mappingio.format.tiny.Tiny2FileReader;
+import net.fabricmc.mappingio.format.ProGuardReader;
+import net.fabricmc.mappingio.format.Tiny2Reader;
 import net.fabricmc.mappingio.tree.MappingTree;
 import net.fabricmc.mappingio.tree.MemoryMappingTree;
 import net.fabricmc.tinyremapper.IMappingProvider;
@@ -502,7 +502,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 				
 				try (final BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream())))
 				{
-					Tiny2FileReader.read(reader, visitor);
+					Tiny2Reader.read(reader, visitor);
 				}
 			}
 			catch (IOException | ZipError e)
@@ -571,8 +571,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		
 		LOGGER.info("Loading mappings on first access...");
 		
-		Path cache = context().manager().getCacheDirectory();
-		Path clientMappings = cache.resolve(MOD_ID + "/" + version + "/client.txt");
+		Path clientMappings = this.memoryFileSystem.resolve(MOD_ID + "/" + version + "/client.txt");
 		
 		if (Files.notExists(clientMappings))
 		{
@@ -583,7 +582,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 			LOGGER.info("Done");
 		}
 		
-		Path serverMappings = cache.resolve(MOD_ID + "/" + version + "/server.txt");
+		Path serverMappings = this.memoryFileSystem.resolve(MOD_ID + "/" + version + "/server.txt");
 		
 		if (Files.notExists(serverMappings))
 		{
@@ -596,8 +595,8 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		
 		mappingTree = new MemoryMappingTree();
 		
-		ProGuardFileReader.read(Files.newBufferedReader(clientMappings), "mojang", "official", mappingTree);
-		ProGuardFileReader.read(Files.newBufferedReader(serverMappings), "mojang", "official", mappingTree);
+		ProGuardReader.read(Files.newBufferedReader(clientMappings), "mojang", "official", mappingTree);
+		ProGuardReader.read(Files.newBufferedReader(serverMappings), "mojang", "official", mappingTree);
 		loadIntermediary(mappingTree);
 		
 		LOGGER.info("Done loading mappings.");
