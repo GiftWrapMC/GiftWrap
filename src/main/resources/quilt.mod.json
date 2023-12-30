@@ -12,7 +12,8 @@
 			"contributors":
 			{
 				"Virtuoel": "Author"
-			}
+			},
+			"icon": "assets/gift_wrap/icon.png"
 		},
 		"intermediate_mappings": "net.fabricmc:intermediary",
 		"language_adapters":
