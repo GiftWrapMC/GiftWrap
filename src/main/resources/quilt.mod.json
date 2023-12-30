@@ -20,10 +20,6 @@
 			"gift_wrap": "virtuoel.gift_wrap.GiftWrapLanguageAdapter"
 		}
 	},
-	"mixin":
-	[
-		"gift_wrap.mixins.json"
-	],
 	"modmenu":
 	{
 		"badges":
