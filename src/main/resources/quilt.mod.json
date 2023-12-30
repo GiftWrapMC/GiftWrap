@@ -8,7 +8,7 @@
 		"metadata":
 		{
 			"name": "Gift Wrap",
-			"description": "A loader plugin test.",
+			"description": "A loader plugin for running NeoForge mods.",
 			"contributors":
 			{
 				"Virtuoel": "Author"
