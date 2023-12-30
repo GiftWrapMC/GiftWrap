@@ -13,6 +13,11 @@
 			{
 				"Virtuoel": "Author"
 			},
+			"contact":
+			{
+				"issues": "https://github.com/GiftWrapMC/GiftWrap/issues",
+				"sources": "https://github.com/GiftWrapMC/GiftWrap"
+			},
 			"icon": "assets/gift_wrap/icon.png"
 		},
 		"intermediate_mappings": "net.fabricmc:intermediary",
