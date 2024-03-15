@@ -577,7 +577,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		{
 			LOGGER.info("Getting client.txt");
 			Files.createDirectories(clientMappings.getParent());
-			URL url = new URL("https://piston-data.mojang.com/v1/objects/5c292ff7d3161977041116698e295083fd5ec8f5/client.txt");
+			URL url = new URL("https://piston-data.mojang.com/v1/objects/be76ecc174ea25580bdc9bf335481a5192d9f3b7/client.txt");
 			Files.copy(url.openStream(), clientMappings);
 			LOGGER.info("Done");
 		}
@@ -588,7 +588,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		{
 			LOGGER.info("Getting server.txt");
 			Files.createDirectories(serverMappings.getParent());
-			URL url = new URL("https://piston-data.mojang.com/v1/objects/dced504a9b5df367ddd3477adac084cea8024ba4/server.txt");
+			URL url = new URL("https://piston-data.mojang.com/v1/objects/c1cafe916dd8b58ed1fe0564fc8f786885224e62/server.txt");
 			Files.copy(url.openStream(), serverMappings);
 			LOGGER.info("Done");
 		}
