@@ -21,6 +21,13 @@
 			"icon": "assets/gift_wrap/icon.png"
 		},
 		"intermediate_mappings": "net.fabricmc:intermediary",
+		"entrypoints":
+		{
+			"init":
+			[
+				"virtuoel.gift_wrap.GiftWrap"
+			]
+		},
 		"language_adapters":
 		{
 			"gift_wrap": "virtuoel.gift_wrap.GiftWrapLanguageAdapter"
