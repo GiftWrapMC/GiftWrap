@@ -171,147 +171,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 			remapper.finish();
 			outputConsumer.close();
 			
-			Path accessTransformerPath = remappedPath.resolve("META-INF").resolve("accesstransformer.cfg");
-			if (Files.exists(accessTransformerPath))
-			{
-				Path accessWidenerPath = remappedPath.resolve(meta.id() + ".accesswidener");
-				if (Files.notExists(accessWidenerPath))
-				{
-					try (final OutputStream out = Files.newOutputStream(accessWidenerPath))
-					{
-						Map<String, Boolean> deferredClasses = new HashMap<>();
-						Map<String, Map<String, Boolean>> deferredMethods = new HashMap<>();
-						Map<String, Map<String, Boolean>> deferredFields = new HashMap<>();
-						try (final Stream<String> lines = Files.lines(accessTransformerPath))
-						{
-							lines.forEach(line ->
-							{
-								line = line.trim();
-								if (line.startsWith("#"))
-								{
-									return;
-								}
-								
-								String[] parts = line.split(" ");
-								
-								String visibility = parts[0];
-								String clazz = parts[1].replace('.', '/');
-								String desc = parts.length > 2 ? parts[2] : null;
-								
-								boolean unfinal = visibility.endsWith("-f");
-								
-								if (desc == null || desc.startsWith("#"))
-								{
-									deferredClasses.put(clazz, unfinal);
-								}
-								else
-								{
-									int index = desc.indexOf('(');
-									if (index != -1)
-									{
-										deferredMethods.computeIfAbsent(clazz, $ -> new HashMap<>()).put(desc.substring(0, index), unfinal);
-									}
-									else
-									{
-										deferredFields.computeIfAbsent(clazz, $ -> new HashMap<>()).put(desc, unfinal);
-									}
-								}
-							});
-						}
-						
-						String dst = "intermediary";
-						
-						StringBuilder text = new StringBuilder("accessWidener\tv2\t");
-						text.append(dst);
-						
-						Boolean unfinal;
-						String srcClass, clazz, name, desc;
-						Map<String, Boolean> entries;
-						for (MappingTree.ClassMapping c : mappingTree().getClasses())
-						{
-							srcClass = c.getName("mojang");
-							clazz = c.getName(dst);
-							
-							unfinal = deferredClasses.get(srcClass);
-							if (unfinal != null)
-							{
-								text.append('\n');
-								text.append(unfinal ? "extendable" : "accessible");
-								text.append("\tclass\t");
-								text.append(clazz);
-							}
-							
-							entries = deferredMethods.get(srcClass);
-							if (entries != null)
-							{
-								for (MappingTree.MethodMapping m : c.getMethods())
-								{
-									unfinal = entries.get(m.getName("mojang"));
-									if (unfinal != null)
-									{
-										text.append('\n');
-										text.append("accessible");
-										text.append("\tmethod\t");
-										text.append(clazz);
-										text.append('\t');
-										text.append(name = m.getName(dst));
-										text.append('\t');
-										text.append(desc = m.getDesc(dst));
-										if (unfinal)
-										{
-											text.append('\n');
-											text.append("extendable");
-											text.append("\tmethod\t");
-											text.append(clazz);
-											text.append('\t');
-											text.append(name);
-											text.append('\t');
-											text.append(desc);
-										}
-									}
-								}
-							}
-							
-							entries = deferredFields.get(srcClass);
-							if (entries != null)
-							{
-								for (MappingTree.FieldMapping f : c.getFields())
-								{
-									unfinal = entries.get(f.getName("mojang"));
-									if (unfinal != null)
-									{
-										text.append('\n');
-										text.append("accessible");
-										text.append("\tfield\t");
-										text.append(clazz);
-										text.append('\t');
-										text.append(name = f.getName(dst));
-										text.append('\t');
-										text.append(desc = f.getDesc(dst));
-										if (unfinal)
-										{
-											text.append('\n');
-											text.append("mutable");
-											text.append("\tfield\t");
-											text.append(clazz);
-											text.append('\t');
-											text.append(name);
-											text.append('\t');
-											text.append(desc);
-										}
-									}
-								}
-							}
-						}
-						
-						out.write(text.toString().getBytes(StandardCharsets.UTF_8));
-					}
-					catch (IOException e)
-					{
-						e.printStackTrace();
-					}
-				}
-			}
+			generateAccessWidener(meta, remappedPath);
 			
 			LOGGER.info("Done remapping mod \"{}\".", meta.id());
 			
@@ -319,6 +179,151 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		}
 		
 		return false;
+	}
+	
+	public void generateAccessWidener(final ModMetadataExt meta, final Path remappedPath)
+	{
+		Path accessTransformerPath = remappedPath.resolve("META-INF").resolve("accesstransformer.cfg");
+		if (Files.exists(accessTransformerPath))
+		{
+			Path accessWidenerPath = remappedPath.resolve(meta.id() + ".accesswidener");
+			if (Files.notExists(accessWidenerPath))
+			{
+				try (final OutputStream out = Files.newOutputStream(accessWidenerPath))
+				{
+					Map<String, Boolean> deferredClasses = new HashMap<>();
+					Map<String, Map<String, Boolean>> deferredMethods = new HashMap<>();
+					Map<String, Map<String, Boolean>> deferredFields = new HashMap<>();
+					try (final Stream<String> lines = Files.lines(accessTransformerPath))
+					{
+						lines.forEach(line ->
+						{
+							line = line.trim();
+							if (line.startsWith("#"))
+							{
+								return;
+							}
+							
+							String[] parts = line.split(" ");
+							
+							String visibility = parts[0];
+							String clazz = parts[1].replace('.', '/');
+							String desc = parts.length > 2 ? parts[2] : null;
+							
+							boolean unfinal = visibility.endsWith("-f");
+							
+							if (desc == null || desc.startsWith("#"))
+							{
+								deferredClasses.put(clazz, unfinal);
+							}
+							else
+							{
+								int index = desc.indexOf('(');
+								if (index != -1)
+								{
+									deferredMethods.computeIfAbsent(clazz, $ -> new HashMap<>()).put(desc.substring(0, index), unfinal);
+								}
+								else
+								{
+									deferredFields.computeIfAbsent(clazz, $ -> new HashMap<>()).put(desc, unfinal);
+								}
+							}
+						});
+					}
+					
+					String dst = "intermediary";
+					
+					StringBuilder text = new StringBuilder("accessWidener\tv2\t");
+					text.append(dst);
+					
+					Boolean unfinal;
+					String srcClass, clazz, name, desc;
+					Map<String, Boolean> entries;
+					for (MappingTree.ClassMapping c : mappingTree().getClasses())
+					{
+						srcClass = c.getName("mojang");
+						clazz = c.getName(dst);
+						
+						unfinal = deferredClasses.get(srcClass);
+						if (unfinal != null)
+						{
+							text.append('\n');
+							text.append(unfinal ? "extendable" : "accessible");
+							text.append("\tclass\t");
+							text.append(clazz);
+						}
+						
+						entries = deferredMethods.get(srcClass);
+						if (entries != null)
+						{
+							for (MappingTree.MethodMapping m : c.getMethods())
+							{
+								unfinal = entries.get(m.getName("mojang"));
+								if (unfinal != null)
+								{
+									text.append('\n');
+									text.append("accessible");
+									text.append("\tmethod\t");
+									text.append(clazz);
+									text.append('\t');
+									text.append(name = m.getName(dst));
+									text.append('\t');
+									text.append(desc = m.getDesc(dst));
+									if (unfinal)
+									{
+										text.append('\n');
+										text.append("extendable");
+										text.append("\tmethod\t");
+										text.append(clazz);
+										text.append('\t');
+										text.append(name);
+										text.append('\t');
+										text.append(desc);
+									}
+								}
+							}
+						}
+						
+						entries = deferredFields.get(srcClass);
+						if (entries != null)
+						{
+							for (MappingTree.FieldMapping f : c.getFields())
+							{
+								unfinal = entries.get(f.getName("mojang"));
+								if (unfinal != null)
+								{
+									text.append('\n');
+									text.append("accessible");
+									text.append("\tfield\t");
+									text.append(clazz);
+									text.append('\t');
+									text.append(name = f.getName(dst));
+									text.append('\t');
+									text.append(desc = f.getDesc(dst));
+									if (unfinal)
+									{
+										text.append('\n');
+										text.append("mutable");
+										text.append("\tfield\t");
+										text.append(clazz);
+										text.append('\t');
+										text.append(name);
+										text.append('\t');
+										text.append(desc);
+									}
+								}
+							}
+						}
+					}
+					
+					out.write(text.toString().getBytes(StandardCharsets.UTF_8));
+				}
+				catch (IOException e)
+				{
+					e.printStackTrace();
+				}
+			}
+		}
 	}
 	
 	public void loadIntermediary(final MappingVisitor visitor)
