@@ -466,5 +466,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 	{
 		QuiltLoader.getObjectShare().remove("gift_wrap:method_insn_patches");
 		GiftWrapModScanner.METHOD_INSN_PATCHES.clear();
+		
+		QuiltLoader.getObjectShare().remove("gift_wrap:adapter");
 	}
 }

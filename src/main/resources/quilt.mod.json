@@ -27,10 +27,6 @@
 			[
 				"virtuoel.gift_wrap.GiftWrap"
 			]
-		},
-		"language_adapters":
-		{
-			"gift_wrap": "virtuoel.gift_wrap.GiftWrapLanguageAdapter"
 		}
 	},
 	"modmenu":

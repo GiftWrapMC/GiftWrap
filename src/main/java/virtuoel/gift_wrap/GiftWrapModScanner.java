@@ -21,6 +21,7 @@ import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.MethodInsnNode;
+import org.quiltmc.loader.api.QuiltLoader;
 import org.quiltmc.loader.api.plugin.ModMetadataExt;
 import org.quiltmc.loader.api.plugin.ModMetadataExt.ModEntrypoint;
 
@@ -207,9 +208,12 @@ public class GiftWrapModScanner
 			e.printStackTrace();
 		}
 		
-		for (final String modClass : modClasses)
+		if (QuiltLoader.getObjectShare().get("gift_wrap:adapter") instanceof final String adapter)
 		{
-			initEntrypoints.add(ModEntrypoint.create("gift_wrap", modClass));
+			for (final String modClass : modClasses)
+			{
+				initEntrypoints.add(ModEntrypoint.create(adapter, modClass));
+			}
 		}
 		
 		entrypoints.put("init", initEntrypoints);
