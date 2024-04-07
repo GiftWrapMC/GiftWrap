@@ -37,9 +37,9 @@ import org.quiltmc.loader.impl.util.SystemProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import net.fabricmc.mappingio.MappingReader;
 import net.fabricmc.mappingio.MappingVisitor;
 import net.fabricmc.mappingio.format.ProGuardReader;
-import net.fabricmc.mappingio.format.Tiny2Reader;
 import net.fabricmc.mappingio.tree.MappingTree;
 import net.fabricmc.mappingio.tree.MemoryMappingTree;
 import net.fabricmc.tinyremapper.IMappingProvider;
@@ -347,7 +347,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 				
 				try (final BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream())))
 				{
-					Tiny2Reader.read(reader, visitor);
+					MappingReader.read(reader, visitor);
 				}
 			}
 			catch (IOException | ZipError e)
