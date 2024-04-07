@@ -108,7 +108,7 @@ public class GiftWrapModOption extends ModLoadOption
 	@Override
 	public @Nullable String namespaceMappingFrom()
 	{
-		return this.requiresRemap ? "mojang" : null;
+		return null;
 	}
 	
 	@Override
