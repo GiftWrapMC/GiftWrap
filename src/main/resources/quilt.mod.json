@@ -2,7 +2,7 @@
 	"schema_version": 1,
 	"quilt_loader":
 	{
-		"group": "virtuoel",
+		"group": "io.github.giftwrapmc",
 		"id": "gift_wrap",
 		"version": "${version}",
 		"metadata":
@@ -25,7 +25,7 @@
 		{
 			"init":
 			[
-				"virtuoel.gift_wrap.GiftWrap"
+				"io.github.giftwrapmc.gift_wrap.GiftWrap"
 			]
 		}
 	},
@@ -38,20 +38,20 @@
 	},
 	"experimental_quilt_loader_plugin":
 	{
-		"class": "virtuoel.gift_wrap.GiftWrapPlugin",
+		"class": "io.github.giftwrapmc.gift_wrap.GiftWrapPlugin",
 		"packages":
 		[
-			"virtuoel.gift_wrap.shadow.nightconfig.core",
-			"virtuoel.gift_wrap.shadow.nightconfig.core.conversion",
-			"virtuoel.gift_wrap.shadow.nightconfig.core.file",
-			"virtuoel.gift_wrap.shadow.nightconfig.core.io",
-			"virtuoel.gift_wrap.shadow.nightconfig.core.utils",
-			"virtuoel.gift_wrap.shadow.nightconfig.toml",
-			"virtuoel.gift_wrap.shadow.mappingio",
-			"virtuoel.gift_wrap.shadow.mappingio.adapter",
-			"virtuoel.gift_wrap.shadow.mappingio.format",
-			"virtuoel.gift_wrap.shadow.mappingio.tree",
-			"virtuoel.gift_wrap"
+			"io.github.giftwrapmc.gift_wrap.shadow.nightconfig.core",
+			"io.github.giftwrapmc.gift_wrap.shadow.nightconfig.core.conversion",
+			"io.github.giftwrapmc.gift_wrap.shadow.nightconfig.core.file",
+			"io.github.giftwrapmc.gift_wrap.shadow.nightconfig.core.io",
+			"io.github.giftwrapmc.gift_wrap.shadow.nightconfig.core.utils",
+			"io.github.giftwrapmc.gift_wrap.shadow.nightconfig.toml",
+			"io.github.giftwrapmc.gift_wrap.shadow.mappingio",
+			"io.github.giftwrapmc.gift_wrap.shadow.mappingio.adapter",
+			"io.github.giftwrapmc.gift_wrap.shadow.mappingio.format",
+			"io.github.giftwrapmc.gift_wrap.shadow.mappingio.tree",
+			"io.github.giftwrapmc.gift_wrap"
 		]
 	}
 }

@@ -1,4 +1,4 @@
-package virtuoel.gift_wrap;
+package io.github.giftwrapmc.gift_wrap;
 
 import java.lang.reflect.Field;
 

@@ -35,7 +35,7 @@ repositories {
 		name = "JitPack"
 		url = "https://jitpack.io"
 		content {
-			includeGroup "com.github.Virtuoel"
+			includeGroup "com.github.GiftWrapMC"
 		}
 	}
 	maven {
@@ -250,8 +250,8 @@ tasks.named("sourcesJar") {
 
 shadowJar {
 	configurations = [project.configurations.shadowImplementation]
-	relocate "net.fabricmc.mappingio", "virtuoel.gift_wrap.shadow.mappingio"
-	relocate "com.electronwill.nightconfig", "virtuoel.gift_wrap.shadow.nightconfig"
+	relocate "net.fabricmc.mappingio", "io.github.giftwrapmc.gift_wrap.shadow.mappingio"
+	relocate "com.electronwill.nightconfig", "io.github.giftwrapmc.gift_wrap.shadow.nightconfig"
 }
 
 remapJar {
