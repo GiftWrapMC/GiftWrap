@@ -7,7 +7,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -27,8 +26,6 @@ import org.quiltmc.loader.api.plugin.ModMetadataExt.ModEntrypoint;
 
 public class GiftWrapModScanner
 {
-	public static final Map<String, String> SHADOWED_FIELD_NAMES = new HashMap<>();
-	public static final Map<String, String> SHADOWED_METHOD_NAMES = new HashMap<>();
 	public static final Collection<BiPredicate<String, MethodInsnNode>> METHOD_INSN_PATCHES = new ArrayList<>();
 	
 	public static void scanModClasses(Path modRoot, ModMetadataExt metadata, boolean shouldPatch)
@@ -44,7 +41,6 @@ public class GiftWrapModScanner
 		final Collection<ModEntrypoint> initEntrypoints = new ArrayList<>();
 		
 		final Set<String> modClasses = new LinkedHashSet<>();
-		final Set<String> mixinClasses = new LinkedHashSet<>();
 		
 		try
 		{
@@ -74,47 +70,18 @@ public class GiftWrapModScanner
 								modClasses.add(className);
 							}
 							
-							if ("Lorg/spongepowered/asm/mixin/Mixin;".equals(descriptor))
-							{
-								mixinClasses.add(className);
-							}
-							
 							return super.visitAnnotation(descriptor, visible);
 						}
 						
 						@Override
 						public FieldVisitor visitField(int access, String name, String descriptor, String signature, Object value)
 						{
-							if (shouldPatch)
-							{
-								if (mixinClasses.contains(className))
-								{
-									if (name.length() > 3 && name.startsWith("f_") && name.endsWith("_") && SHADOWED_FIELD_NAMES.containsKey(name))
-									{
-										patched[0] = true;
-										name = SHADOWED_FIELD_NAMES.get(name);
-									}
-								}
-							}
-							
 							return super.visitField(access, name, descriptor, signature, value);
 						}
 						
 						@Override
 						public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions)
 						{
-							if (shouldPatch)
-							{
-								if (mixinClasses.contains(className))
-								{
-									if (name.length() > 3 && name.startsWith("m_") && name.endsWith("_") && SHADOWED_METHOD_NAMES.containsKey(name))
-									{
-										patched[0] = true;
-										name = SHADOWED_METHOD_NAMES.get(name);
-									}
-								}
-							}
-							
 							return new MethodVisitor(Opcodes.ASM9, super.visitMethod(access, name, descriptor, signature, exceptions))
 							{
 								@Override
@@ -126,18 +93,6 @@ public class GiftWrapModScanner
 								@Override
 								public void visitFieldInsn(int opcode, String owner, String insnName, String descriptor)
 								{
-									if (shouldPatch)
-									{
-										if (mixinClasses.contains(className))
-										{
-											if (insnName.length() > 3 && insnName.startsWith("f_") && insnName.endsWith("_") && SHADOWED_FIELD_NAMES.containsKey(insnName))
-											{
-												patched[0] = true;
-												insnName = SHADOWED_FIELD_NAMES.get(insnName);
-											}
-										}
-									}
-									
 									super.visitFieldInsn(opcode, owner, insnName, descriptor);
 								}
 								
@@ -146,15 +101,6 @@ public class GiftWrapModScanner
 								{
 									if (shouldPatch)
 									{
-										if (mixinClasses.contains(className))
-										{
-											if (insnName.length() > 3 && insnName.startsWith("m_") && insnName.endsWith("_") && SHADOWED_METHOD_NAMES.containsKey(insnName))
-											{
-												patched[0] = true;
-												insnName = SHADOWED_METHOD_NAMES.get(insnName);
-											}
-										}
-										
 										final MethodInsnNode node = new MethodInsnNode(opcode, owner, insnName, descriptor, isInterface);
 										
 										for (final BiPredicate<String, MethodInsnNode> patch : METHOD_INSN_PATCHES)

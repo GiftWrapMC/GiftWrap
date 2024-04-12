@@ -47,6 +47,7 @@ import net.fabricmc.tinyremapper.InputTag;
 import net.fabricmc.tinyremapper.NonClassCopyMode;
 import net.fabricmc.tinyremapper.OutputConsumerPath;
 import net.fabricmc.tinyremapper.TinyRemapper;
+import net.fabricmc.tinyremapper.extension.mixin.MixinExtension;
 
 public class GiftWrapPlugin implements QuiltLoaderPlugin
 {
@@ -150,6 +151,7 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		{
 			TinyRemapper remapper = TinyRemapper.newRemapper()
 				.withMappings(mappingProvider())
+				.extension(new MixinExtension())
 				.renameInvalidLocals(false)
 				.ignoreFieldDesc(true)
 				.ignoreConflicts(true)
