@@ -2,6 +2,7 @@ package io.github.giftwrapmc.gift_wrap;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
@@ -19,6 +20,8 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.zip.ZipError;
 
+import org.apache.commons.codec.binary.Hex;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.quiltmc.loader.api.FasterFiles;
 import org.quiltmc.loader.api.LoaderValue;
@@ -83,35 +86,40 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 		
 		ModMetadataExt meta = metadata.get(0);
 		
-		Path resourceRoot = root;
-		
 		Path cache = manager.getCacheDirectory();
 		
-		Path remappedMinecraft = cache.resolve(MOD_ID + "/remapped/minecraft");
-		remapVanillaIfNeeded(remappedMinecraft);
+		ModLoadOption minecraft = context().manager().getAllMods("minecraft").stream().findFirst().get();
+		Path remappedMinecraft = cache.resolve(MOD_ID + "/remapped/minecraft/" + minecraft.version().raw());
+		remapVanillaIfNeeded(minecraft, remappedMinecraft);
 		
-		Path remappedPath = cache.resolve(MOD_ID + "/remapped/" + meta.id());
-		boolean wasRemapped = remapModIfNeeded(meta, resourceRoot, remappedMinecraft, remappedPath);
+		byte[] hash = null;
+		String hashString = "";
+		try (InputStream is = Files.newInputStream(fromPath))
+		{
+			hash = DigestUtils.sha1(is);
+			hashString = Hex.encodeHexString(hash);
+		}
+		
+		Path remappedPath = cache.resolve(MOD_ID + "/remapped/" + meta.id() + "/" + hashString);
+		boolean wasRemapped = remapModIfNeeded(meta, root, remappedMinecraft, remappedPath);
 		
 		GiftWrapModScanner.scanModClasses(remappedPath, meta, wasRemapped);
-		
-		Files.copy(resourceRoot = remappedPath, this.memoryFileSystem.resolve(meta.id()));
 		
 		ModLoadOption[] options = new ModLoadOption[metadata.size()];
 		
 		for (int i = 0; i < options.length; i++)
 		{
-			options[i] = new GiftWrapModOption(context(), metadata.get(i), fromPath, fileIcon, resourceRoot, mandatory, requiresRemap);
+			options[i] = new GiftWrapModOption(context(), metadata.get(i), fromPath, fileIcon, remappedPath, mandatory, requiresRemap, hash);
 		}
 		
 		return options;
 	}
 	
-	public boolean remapVanillaIfNeeded(final Path remappedMinecraft) throws IOException
+	public boolean remapVanillaIfNeeded(final ModLoadOption minecraft, final Path remappedMinecraft) throws IOException
 	{
 		if (Files.notExists(remappedMinecraft))
 		{
-			Path minecraftRoot = context().manager().getAllMods("minecraft").stream().findFirst().get().resourceRoot();
+			Path minecraftRoot = minecraft.resourceRoot();
 			
 			boolean development = Boolean.parseBoolean(System.getProperty(SystemProperties.DEVELOPMENT, "false"));
 			String src = development ? "named" : "intermediary";

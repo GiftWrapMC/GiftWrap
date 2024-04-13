@@ -26,6 +26,11 @@ public class GiftWrapModOption extends ModLoadOption
 	
 	public GiftWrapModOption(QuiltPluginContext pluginContext, ModMetadataExt meta, Path from, QuiltLoaderIcon fileIcon, Path resourceRoot, boolean mandatory, boolean requiresRemap)
 	{
+		this(pluginContext, meta, from, fileIcon, resourceRoot, mandatory, requiresRemap, null);
+	}
+	
+	public GiftWrapModOption(QuiltPluginContext pluginContext, ModMetadataExt meta, Path from, QuiltLoaderIcon fileIcon, Path resourceRoot, boolean mandatory, boolean requiresRemap, byte[] hash)
+	{
 		this.pluginContext = pluginContext;
 		this.metadata = meta;
 		this.from = from;
@@ -33,6 +38,7 @@ public class GiftWrapModOption extends ModLoadOption
 		this.resourceRoot = resourceRoot;
 		this.mandatory = mandatory;
 		this.requiresRemap = requiresRemap;
+		this.hash = hash;
 	}
 	
 	@Override
