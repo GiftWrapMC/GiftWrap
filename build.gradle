@@ -60,13 +60,13 @@ else if(project.hasProperty("forge_version")) {
 	
 	loom {
 		forge {
-			mixinConfig "${archives_base_name.replaceAll( /([A-Z])/, /_$1/ ).toLowerCase().replaceAll( /^_/, '' )}.mixins.json"
+			mixinConfig "${archives_base_name.replaceAll(/([a-z])([A-Z])/, /$1_$2/).replaceAll(/([A-Z])([A-Z][a-z])/, /$1_$2/).toLowerCase()}.mixins.json"
 		}
 	}
 }
 
 loom {
-	def access_widener_file = file("src/main/resources/${archives_base_name.replaceAll( /([A-Z])/, /_$1/ ).toLowerCase().replaceAll( /^_/, '' )}.accesswidener")
+	def access_widener_file = file("src/main/resources/${archives_base_name.replaceAll(/([a-z])([A-Z])/, /$1_$2/).replaceAll(/([A-Z])([A-Z][a-z])/, /$1_$2/).toLowerCase()}.accesswidener")
 	if(access_widener_file.exists()) {
 		accessWidenerPath = access_widener_file
 	}
