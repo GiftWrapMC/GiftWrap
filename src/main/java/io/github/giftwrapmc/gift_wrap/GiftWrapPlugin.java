@@ -241,7 +241,8 @@ public class GiftWrapPlugin implements QuiltLoaderPlugin
 						});
 					}
 					
-					String dst = "intermediary";
+					boolean development = Boolean.parseBoolean(System.getProperty(SystemProperties.DEVELOPMENT, "false"));
+					String dst = development ? "named" : "intermediary";
 					
 					StringBuilder text = new StringBuilder("accessWidener\tv2\t");
 					text.append(dst);
