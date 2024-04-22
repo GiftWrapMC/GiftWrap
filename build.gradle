@@ -1,5 +1,5 @@
 plugins {
-	id "org.quiltmc.loom" version "1.5.+"
+	id "org.quiltmc.loom" version "1.6.+"
 	id "eclipse"
 	id "maven-publish"
 	id "com.github.johnrengelman.shadow" version "8.1.1"
