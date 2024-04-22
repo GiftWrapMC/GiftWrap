@@ -21,6 +21,7 @@
 			"icon": "assets/gift_wrap/icon.png"
 		},
 		"intermediate_mappings": "net.fabricmc:intermediary",
+		"load_type": "always",
 		"entrypoints":
 		{
 			"init":
