@@ -53,7 +53,7 @@ public class GiftWrapModScanner
 					return;
 				}
 				
-				final String className = fileName.substring(0, fileName.length() - 6).replace('/', '.');
+				final String className = fileName.substring(0, fileName.length() - 6).replace(modRoot.getFileSystem().getSeparator(), ".");
 				
 				byte[] patchedBytes = null;
 				try (final InputStream in = Files.newInputStream(p))
